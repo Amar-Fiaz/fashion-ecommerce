@@ -10,7 +10,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 1 — MERN Project Foundation** — COMPLETE
 
-**Phase 2 — Design System** — Not Started
+**Phase 2 — Design System** — COMPLETE
+
+**Phase 3 — Header, Navigation & Global UI** — Not Started
 
 ---
 
@@ -115,6 +117,50 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 2 — Design System. Not started.
 
+
+---
+
+### Phase 2 — Design System
+
+**Status:** COMPLETE
+
+**Completed:**
+- Design tokens defined in `client/tailwind.config.js`: monochrome color palette (white/neutral grayscale/black) with a single accent color (`#B8935A`), a minimal 7-step type scale, default Tailwind spacing scale (no custom override), a 5-step border radius scale, and a 3-step shadow scale.
+- `docs/DESIGN_SYSTEM.md` fully populated with the actual token values, replacing the Phase 0 skeleton — colors, typography, spacing convention, border radius, shadows, and documented button/input variant intentions.
+- Three foundational reusable components created in `client/src/components/`: `Button.jsx` (primary/secondary/ghost/destructive variants, disabled state), `Input.jsx` (default/focus/error/disabled states), `Container.jsx` (consistent content width/padding across breakpoints).
+- All three components styled entirely from the design tokens — no hardcoded colors, spacing, or radius values outside the token set.
+- `HomePlaceholder` page temporarily updated to render all component variants for visual verification (still placeholder/verification content, not real homepage content — that remains Phase 4 scope).
+
+**Decisions resolved during this phase:**
+- Visual direction: monochrome base with a single accent color (muted gold/bronze, `#B8935A`), chosen to avoid clashing with semantic success/error colors.
+- Typography: single modern sans-serif using the system font stack — no external font file/dependency added.
+- Token scale: minimal, intentionally small scale per token category, with Tailwind's default spacing scale reused as-is rather than a custom override.
+
+**Files Created:**
+- `client/src/components/Button.jsx`
+- `client/src/components/Input.jsx`
+- `client/src/components/Container.jsx`
+
+**Files Modified:**
+- `client/tailwind.config.js`
+- `docs/DESIGN_SYSTEM.md`
+- `client/src/pages/HomePlaceholder.jsx` (temporary verification content)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- `npm run build` completed successfully with no errors after each step (tokens, components, placeholder update).
+- Visually verified in the browser: all four button variants (primary, secondary, ghost, destructive) render with correct token-based styling; disabled button shows reduced opacity and no pointer events; both input states (default and error) render correctly with appropriate border/message styling.
+- Confirmed via browser DevTools that rendered colors match the defined token values (spot-checked the primary button's background against the `accent` token).
+- Checked all required breakpoints (360/390/430/768/1024/1280/1440/1920) — no horizontal overflow or layout breakage.
+- Browser console and backend terminal checked — no errors.
+- Backend `/api/health` and undefined-route behavior re-confirmed unchanged from Phase 1.
+- All work committed incrementally to Git in 3 logical groups, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- None.
+
+**Next Phase:** Phase 3 — Header, Navigation & Global UI. Not started.
+
 ---
 
 ## Phase History Template
@@ -141,4 +187,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 and Phase 1 are both complete and verified. The client and server foundations are implemented, tested locally (including MongoDB Atlas connectivity, the health-check endpoint, error handling, CORS, and the full client-to-backend RTK Query pipeline), and committed to Git. Phase 2 — Design System has not started. This file will be updated again when Phase 2 begins.
+Phase 0, Phase 1, and Phase 2 are all complete and verified. The client and server foundations are implemented and tested, and the design system (colors, typography, spacing, radius, shadows) is defined and proven via foundational Button, Input, and Container components. Phase 3 — Header, Navigation & Global UI has not started. This file will be updated again when Phase 3 begins.
