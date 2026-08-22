@@ -12,7 +12,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 2 — Design System** — COMPLETE
 
-**Phase 3 — Header, Navigation & Global UI** — Not Started
+**Phase 3 — Header, Navigation & Global UI** — COMPLETE
+
+**Phase 4 — Homepage** — Not Started
 
 ---
 
@@ -161,6 +163,52 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 3 — Header, Navigation & Global UI. Not started.
 
+
+---
+
+### Phase 3 — Header, Navigation & Global UI
+
+**Status:** COMPLETE
+
+**Completed:**
+- Mock navigation category data created (`navigationData.js`): Women, Men, Kids, Accessories, Sale, each with realistic subcategories (except Sale). Data shape mirrors the future `Category`/`SubCategory` models so it can be swapped for real API data in Phase 5 with minimal component changes.
+- `MegaMenu` component built — fully data-driven desktop dropdown, renders whatever subcategories it's given.
+- `MobileNav` component built — hamburger-triggered slide-in drawer with overlay, expandable/collapsible categories, data-driven from the same mock data as the desktop menu.
+- `Header` component built — logo placeholder, desktop nav with mega menu (hover/click), mobile hamburger trigger, and non-functional search/account/cart icon placeholders (real behavior arrives in Phase 5, 7, and 8 respectively).
+- `Footer` component built — links to static pages (About, Contact, FAQ, Shipping Policy, Return Policy, Privacy Policy, Terms and Conditions) as non-navigating placeholders, since those pages don't exist yet; includes a copyright line.
+- `BaseLayout` updated to render the real `Header` and `Footer`, replacing the empty Phase 1 placeholder slots.
+- Desktop/mobile navigation switch occurs at the `lg` (1280px) breakpoint.
+
+**Decisions resolved during this phase:**
+- Mock navigation taxonomy: Women, Men, Kids, Accessories, Sale, with realistic subcategories — mock data only, to be replaced with real API-driven categories in Phase 5.
+- Mobile navigation pattern: hamburger icon with a slide-in drawer menu.
+
+**Files Created:**
+- `client/src/components/navigation/navigationData.js`
+- `client/src/components/navigation/MegaMenu.jsx`
+- `client/src/components/navigation/MobileNav.jsx`
+- `client/src/components/navigation/Header.jsx`
+- `client/src/components/Footer.jsx`
+
+**Files Modified:**
+- `client/src/layouts/BaseLayout.jsx`
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- `npm run build` completed successfully with no errors.
+- Desktop mega menu verified: hovering Women/Men/Kids/Accessories shows the correct subcategories; Sale correctly shows no dropdown (no subcategories).
+- Mobile drawer verified: hamburger opens the drawer with overlay; categories expand/collapse correctly; Sale shows no expand toggle; both the close button and overlay click dismiss the drawer.
+- All required breakpoints (360/390/430/768/1024/1280/1440/1920) checked — no horizontal overflow; desktop/mobile nav switch confirmed clean at the 1280px breakpoint.
+- Footer confirmed visible and correctly wrapping at all breakpoints.
+- Browser console and backend terminal checked — no errors.
+- Backend `/api/health` and undefined-route behavior re-confirmed unchanged from Phase 1.
+- All work committed incrementally to Git in 5 logical groups, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- None. Search, account, and cart icons are intentionally non-functional placeholders, as scoped — not a defect.
+
+**Next Phase:** Phase 4 — Homepage. Not started.
+
 ---
 
 ## Phase History Template
@@ -187,4 +235,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0, Phase 1, and Phase 2 are all complete and verified. The client and server foundations are implemented and tested, and the design system (colors, typography, spacing, radius, shadows) is defined and proven via foundational Button, Input, and Container components. Phase 3 — Header, Navigation & Global UI has not started. This file will be updated again when Phase 3 begins.
+Phase 0 through Phase 3 are all complete and verified. The client and server foundations are implemented and tested, the design system is defined and proven via foundational components, and the global site chrome (header, mega menu, mobile drawer navigation, footer) is built using mock category data ready to be replaced with real API data in Phase 5. Phase 4 — Homepage has not started. This file will be updated again when Phase 4 begins.
