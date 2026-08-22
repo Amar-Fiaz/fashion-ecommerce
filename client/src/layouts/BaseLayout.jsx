@@ -1,13 +1,14 @@
-// Minimal base layout shell for Phase 1.
-// The header and footer are intentionally empty placeholders here -
-// Phase 3 (Header, Navigation & Global UI) builds the real global
-// chrome into these slots without needing to restructure this file.
+import Header from "../components/navigation/Header";
+import Footer from "../components/Footer";
+
+// Global layout shell. Header and Footer are now the real Phase 3
+// components, replacing the empty Phase 1 placeholders.
 function BaseLayout({ children }) {
   return (
-    <div>
-      <header>{/* Global header/navigation - built in Phase 3 */}</header>
-      <main>{children}</main>
-      <footer>{/* Global footer - built in Phase 3 */}</footer>
+    <div className="min-h-screen flex flex-col">
+      <Header />
+      <main className="flex-1">{children}</main>
+      <Footer />
     </div>
   );
 }
