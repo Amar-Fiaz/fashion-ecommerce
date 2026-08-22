@@ -14,7 +14,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 3 — Header, Navigation & Global UI** — COMPLETE
 
-**Phase 4 — Homepage** — Not Started
+**Phase 4 — Homepage** — COMPLETE
+
+**Phase 5 — Product Catalog** — Not Started
 
 ---
 
@@ -209,6 +211,62 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 4 — Homepage. Not started.
 
+
+---
+
+### Phase 4 — Homepage
+
+**Status:** COMPLETE
+
+**Completed:**
+- Mock product data created (`homepageMockProducts.js`), shaped to mirror the future `Product` model fields, with `image` intentionally left empty so `ProductCard` renders a CSS-only placeholder block until real photography exists in Phase 5+.
+- `ProductCard` component built as a shared, reusable component (in `components/`, not `components/home/`) since it will also be used by Phase 5's product listing — data-driven, presentation-only, shows sale pricing (struck-through original + red sale price) when applicable.
+- `ProductSection` component built — a titled, responsive grid of `ProductCard`s, reused for Featured, New Arrivals, and Sale sections.
+- `Hero` component built — full-width CSS-only placeholder image block with a dark overlay, headline, subtext, and a non-functional CTA button.
+- `PromoBanner` component built — static, accent-colored informational strip (non-functional; real admin-managed banners are Phase 13 scope).
+- `NewsletterSignup` component built — client-side email validation via React Hook Form + Zod; submission is simulated locally (shows a success message) since no backend `NewsletterSubscriber` endpoint exists yet.
+- `HomePage` assembled from all of the above, replacing the Phase 1–3 placeholder page (`HomePlaceholder.jsx`, deleted).
+- `AppRoutes.jsx` updated to route `/` to the new `HomePage`.
+- The visible "Backend connection status" / "API is healthy" block was removed from the homepage, since it's development-only verification content, not a real product feature. `/api/health` itself remains fully intact and functional on the backend.
+
+**Decisions resolved during this phase:**
+- Mock product images: CSS-only placeholder blocks (no external image service dependency).
+- Hero section: full-width CSS-only placeholder image block with layered text/CTA content.
+- Removed the visible homepage health-check display; kept `/api/health` itself unchanged.
+
+**Files Created:**
+- `client/src/components/home/homepageMockProducts.js`
+- `client/src/components/ProductCard.jsx`
+- `client/src/components/home/ProductSection.jsx`
+- `client/src/components/home/Hero.jsx`
+- `client/src/components/home/PromoBanner.jsx`
+- `client/src/components/home/NewsletterSignup.jsx`
+- `client/src/pages/HomePage.jsx`
+
+**Files Modified:**
+- `client/src/routes/AppRoutes.jsx`
+- `docs/PROGRESS.md` (this entry)
+
+**Files Deleted:**
+- `client/src/pages/HomePlaceholder.jsx`
+
+**Testing:**
+- `npm run build` completed successfully with no errors.
+- Hero, promo banner, and all three product sections (Featured: 3, New Arrivals: 4, Sale: 2) verified rendering correctly with accurate mock content.
+- Sale pricing display (struck-through original + red sale price) verified correct.
+- Newsletter form verified: invalid email blocks submission and shows a validation error; valid email shows a success message and clears the field.
+- Confirmed no visible health-check text remains anywhere on the homepage.
+- Header and footer from Phase 3 confirmed still present and correctly positioned around the new content.
+- All required breakpoints (360/390/430/768/1024/1280/1440/1920) checked — product grid reflows correctly (2/3/4 columns), no horizontal overflow.
+- Browser console and backend terminal checked — no errors.
+- Backend `/api/health` and undefined-route behavior re-confirmed unchanged and still functional.
+- All work committed incrementally to Git in 6 logical groups, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- None. Hero CTA, promo banner, and product cards are intentionally non-navigating placeholders, as scoped — not a defect. Real linking arrives once catalog routes exist (Phase 5).
+
+**Next Phase:** Phase 5 — Product Catalog. Not started.
+
 ---
 
 ## Phase History Template
@@ -235,4 +293,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 3 are all complete and verified. The client and server foundations are implemented and tested, the design system is defined and proven via foundational components, and the global site chrome (header, mega menu, mobile drawer navigation, footer) is built using mock category data ready to be replaced with real API data in Phase 5. Phase 4 — Homepage has not started. This file will be updated again when Phase 4 begins.
+Phase 0 through Phase 4 are all complete and verified. The client and server foundations are implemented and tested, the design system is defined and proven, the global site chrome is built with mock navigation data, and the homepage is fully assembled with mock product data — all structured so Phase 5's real API-driven catalog data can replace the mocks with minimal rework. Phase 5 — Product Catalog has not started. This file will be updated again when Phase 5 begins.
