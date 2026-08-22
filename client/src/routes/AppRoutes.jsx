@@ -1,15 +1,14 @@
 import { Routes, Route } from "react-router-dom";
 import BaseLayout from "../layouts/BaseLayout";
-import HomePlaceholder from "../pages/HomePlaceholder";
+import HomePage from "../pages/HomePage";
 
-// Centralized route definitions. Only one placeholder route exists
-// in Phase 1. Later phases add routes here (including the lazy-loaded
-// /admin route tree in Phase 12) rather than inventing a new pattern.
+// Centralized route definitions. HomePage replaces the Phase 1-3
+// placeholder now that real homepage content exists (Phase 4).
 function AppRoutes() {
   return (
     <BaseLayout>
       <Routes>
-        <Route path="/" element={<HomePlaceholder />} />
+        <Route path="/" element={<HomePage />} />
       </Routes>
     </BaseLayout>
   );
