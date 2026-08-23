@@ -2,15 +2,16 @@ import { useState } from "react";
 import Container from "../Container";
 import MegaMenu from "./MegaMenu";
 import MobileNav from "./MobileNav";
+import SearchBar from "../../features/product/SearchBar";
 import navigationCategories from "./navigationData";
 
-// Global site header: logo, desktop nav with mega menu, mobile
-// hamburger + drawer, and placeholder search/account/cart icons.
-// Search, account, and cart are non-functional here - real behavior
-// arrives in Phase 5 (search), Phase 7 (account), and Phase 8 (cart).
+// Global site header. Search is now functional (Phase 5) via
+// SearchBar. Account and cart icons remain non-functional placeholders
+// - real behavior arrives in Phase 7 (account) and Phase 8 (cart).
 function Header() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   return (
     <header className="relative border-b border-neutral-200 bg-white">
@@ -32,8 +33,6 @@ function Header() {
             </svg>
           </button>
 
-          {/* Logo placeholder - real branding is out of scope for
-              Phase 3; this is a text placeholder only. */}
           <span className="text-xl font-bold text-black tracking-wide">
             FASHION CO
           </span>
@@ -72,23 +71,30 @@ function Header() {
         </nav>
 
         <div className="flex items-center gap-4">
-          <button type="button" aria-label="Search">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle
-                cx="8.5"
-                cy="8.5"
-                r="5.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M17 17L13 13"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Search"
+              onClick={() => setSearchOpen((prev) => !prev)}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
+                <path
+                  d="M17 17L13 13"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            {searchOpen && <SearchBar onClose={() => setSearchOpen(false)} />}
+          </div>
           <button type="button" aria-label="Account">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <circle
