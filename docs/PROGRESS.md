@@ -16,7 +16,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 4 — Homepage** — COMPLETE
 
-**Phase 5 — Product Catalog** — Not Started
+**Phase 5 — Product Catalog** — COMPLETE
+
+**Phase 6 — Product Details** — Not Started
 
 ---
 
@@ -267,6 +269,62 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 5 — Product Catalog. Not started.
 
+
+---
+
+### Phase 5 — Product Catalog
+
+**Status:** COMPLETE
+
+**Completed:**
+- `Category`, `SubCategory`, and `Product` Mongoose models created, per `DATABASE.md`. Product variants (size/color/stock/sku) embedded as an array within `Product`, per `ARCHITECTURE.md` Section 8 — no separate `Variant` collection.
+- Development-only seed script (`server/src/utils/seed.js`) created and run, populating MongoDB Atlas with 5 categories, 17 subcategories, and 8 products, reusing the Phase 3 mock navigation taxonomy (Women, Men, Kids, Accessories, Sale).
+- Backend catalog API built through the full layered pattern: `product.service.js`/`category.service.js` (filtering, sorting, pagination, text search, search suggestions), `product.controller.js`/`category.controller.js`, `product.routes.js`/`category.routes.js`, wired into `app.js`.
+- Filtering supports category, subcategory, brand, price range, size, and color (against embedded variants). Sorting supports price (asc/desc), newest, and name. Pagination is page-based with configurable limit.
+- Search implemented via a MongoDB text index (`$text`) on `name`/`description`/`tags`; search suggestions implemented via a lightweight regex "starts with" query against product names.
+- Frontend catalog built in `client/src/features/product/`: RTK Query endpoints (`productApi.js`), `ProductFilters`, `ProductSort`, `Pagination`, and `SearchBar` components.
+- `ProductListingPage` created at the `/shop` route — fully API-driven, with filter/sort/page state held in the URL query string.
+- Header's search icon wired to the new functional `SearchBar` with live, debounced suggestions; account and cart icons remain non-functional placeholders (Phase 7 and Phase 8 respectively).
+- `ProductCard` (built in Phase 4) reused as-is for real product data via a small mapping function — no changes needed to the component itself, confirming the Phase 4 mock-data shape was designed well for this replacement.
+- Homepage (Phase 4) re-verified working and unaffected by this phase's changes; it still uses its own separate mock data intentionally, since wiring the homepage's featured/new-arrival/sale sections to live data was not in Phase 5's scope.
+
+**Decisions resolved during this phase:**
+- Seed data via a versioned, manually-run script (not an admin UI, which doesn't exist until Phase 12).
+- Category seed data reuses the Phase 3 mock taxonomy (Women, Men, Kids, Accessories, Sale).
+- Filtering scope: category, subcategory, brand, price, size, color. Rating filter deferred until Phase 11 (reviews don't exist yet).
+- Search implemented via native MongoDB text index and regex suggestions — no external search service added.
+- Pagination: page-based (numbered pages), not infinite scroll.
+
+**Files Created:**
+- `server/src/models/Category.js`, `server/src/models/SubCategory.js`, `server/src/models/Product.js`
+- `server/src/utils/seed.js`
+- `server/src/services/product.service.js`, `server/src/services/category.service.js`
+- `server/src/controllers/product.controller.js`, `server/src/controllers/category.controller.js`
+- `server/src/routes/product.routes.js`, `server/src/routes/category.routes.js`
+- `client/src/features/product/productApi.js`, `ProductFilters.jsx`, `ProductSort.jsx`, `Pagination.jsx`, `SearchBar.jsx`
+- `client/src/pages/ProductListingPage.jsx`
+
+**Files Modified:**
+- `server/src/app.js`
+- `client/src/routes/AppRoutes.jsx`
+- `client/src/components/navigation/Header.jsx`
+- `docs/DATABASE.md` (model statuses updated, field-level schemas added for Category/SubCategory/Product)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- All catalog API endpoints tested directly and via the frontend: product listing, category/subcategory/brand/price/size/color filtering, all four sort options, pagination, text search, and search suggestions all verified returning correct results.
+- Empty-state handling verified (`?minPrice=99999` correctly shows "No products match these filters.", not an error or blank page).
+- Search debounce and suggestion-click-to-navigate flow verified working end-to-end.
+- All required breakpoints (360/390/430/768/1024/1280/1440/1920) checked — filters stack correctly below `lg`, sit beside the grid at `lg`+.
+- Homepage re-verified unaffected by this phase's backend/frontend changes.
+- Browser console and backend terminal checked — no errors.
+- All work committed incrementally to Git in 8 logical groups and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- The Phase 3 mega menu/mobile nav links and the Phase 4 homepage's product sections are not yet wired to real category/product data — both were explicitly out of scope for Phase 5 and remain intentional, not defects. `ProductCard`/Hero CTA remain non-navigating; product detail linking arrives in Phase 6.
+
+**Next Phase:** Phase 6 — Product Details. Not started.
+
 ---
 
 ## Phase History Template
@@ -293,4 +351,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 4 are all complete and verified. The client and server foundations are implemented and tested, the design system is defined and proven, the global site chrome is built with mock navigation data, and the homepage is fully assembled with mock product data — all structured so Phase 5's real API-driven catalog data can replace the mocks with minimal rework. Phase 5 — Product Catalog has not started. This file will be updated again when Phase 5 begins.
+Phase 0 through Phase 5 are all complete and verified. The client and server foundations are implemented and tested, the design system is proven, the global site chrome is built, and the product catalog is now fully real and API-driven — Category/SubCategory/Product models, seeded data, filtering, sorting, search, and pagination all working end-to-end at `/shop`. Phase 6 — Product Details has not started. This file will be updated again when Phase 6 begins.

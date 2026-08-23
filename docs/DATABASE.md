@@ -45,9 +45,9 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | Model | Status | Phase Introduced | Notes |
 |---|---|---|---|
 | User | Not Created | Phase 7 | Includes `role` field (`customer` \| `admin`) |
-| Product | Not Created | Phase 5 | Embedded variants |
-| Category | Not Created | Phase 5 | |
-| SubCategory | Not Created | Phase 5 | |
+| Product | Created | Phase 5 | Embedded variants (size/color/stock/sku); text index on name/description/tags |
+| Category | Created | Phase 5 | |
+| SubCategory | Created | Phase 5 | References parent Category by ObjectId |
 | Cart | Not Created | Phase 8 | See Cart Duality above |
 | Wishlist | Not Created | Phase 8 | |
 | Address | Not Created | Phase 9 | |
@@ -59,7 +59,56 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | Banner | Not Created | Phase 13 | |
 | NewsletterSubscriber | Not Created | Phase 4 or 11 (TBD at phase start) | |
 
-No field-level schema definitions exist yet for any model. Each model's detailed field list is added to this file when that model is actually created, per `CLAUDE.md` Section 12 — not before.
+Field-level schema definitions are added below as each model is created. Models not yet created have no entry here.
+
+### Category
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `slug` | String | Required, unique, indexed |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+### SubCategory
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `slug` | String | Required, indexed |
+| `category` | ObjectId (ref: Category) | Required |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+Compound unique index on `(category, slug)` — a subcategory slug only needs to be unique within its parent category.
+
+### Product
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `slug` | String | Required, unique, indexed |
+| `description` | String | Required |
+| `images` | [String] | Cloudinary URLs — empty until Phase 6+/admin upload exists |
+| `price` | Number | Required |
+| `salePrice` | Number | Nullable |
+| `category` | ObjectId (ref: Category) | Required |
+| `subCategory` | ObjectId (ref: SubCategory) | Required |
+| `brand` | String | |
+| `variants` | [EmbeddedVariant] | Embedded array — see below. Per `ARCHITECTURE.md` Section 8 |
+| `tags` | [String] | |
+| `isFeatured` / `isNewArrival` / `isSale` | Boolean | |
+| `averageRating` / `reviewCount` | Number | Present on schema now; only written to starting Phase 11 |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+**Embedded variant sub-schema** (`variants` array, no separate collection):
+
+| Field | Type | Notes |
+|---|---|---|
+| `size` | String | Required |
+| `color` | String | Required |
+| `stock` | Number | Required, min 0 |
+| `sku` | String | Required |
+
+Indexes: text index on `(name, description, tags)` for search; compound index on `(category, subCategory)` for filtering.
 
 ---
 
