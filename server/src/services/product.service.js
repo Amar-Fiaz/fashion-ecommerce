@@ -1,9 +1,5 @@
 const Product = require("../models/Product");
 
-// Builds and executes the product listing query: filtering, sorting,
-// pagination, and text search all live here, not in the controller,
-// per ARCHITECTURE.md's rule that business/query logic belongs in
-// services/.
 async function getProducts(queryParams) {
   const {
     category,
@@ -31,7 +27,6 @@ async function getProducts(queryParams) {
     if (maxPrice) filter.price.$lte = Number(maxPrice);
   }
 
-  // size/color filter against the embedded variants array
   if (size) filter["variants.size"] = size;
   if (color) filter["variants.color"] = color;
 
@@ -72,18 +67,57 @@ async function getProducts(queryParams) {
   };
 }
 
-// Simple regex "starts with" search against product names, for
-// lightweight search-as-you-type suggestions. Kept separate from the
-// main $text search, which is better suited for full result listings
-// than for fast, partial-input suggestions.
 async function getSearchSuggestions(query) {
   if (!query || query.trim().length === 0) return [];
 
   const regex = new RegExp(`^${query.trim()}`, "i");
 
-  return Product.find({ name: regex })
-    .select("name slug")
-    .limit(8);
+  return Product.find({ name: regex }).select("name slug").limit(8);
 }
 
-module.exports = { getProducts, getSearchSuggestions };
+// Fetches a single product by its slug, with category/subCategory
+// populated. Returns null if not found - the controller is
+// responsible for turning that into a 404.
+async function getProductBySlug(slug) {
+  return Product.findOne({ slug })
+    .populate("category", "name slug")
+    .populate("subCategory", "name slug");
+}
+
+// Related products: same subCategory first (excluding the current
+// product), falling back to same category if fewer than `limit`
+// subCategory matches exist - handles categories with no
+// subcategories (e.g. "Sale") and small catalogs gracefully.
+async function getRelatedProducts(product, limit = 4) {
+  const subCategoryMatches = await Product.find({
+    subCategory: product.subCategory,
+    _id: { $ne: product._id },
+  })
+    .populate("category", "name slug")
+    .populate("subCategory", "name slug")
+    .limit(limit);
+
+  if (subCategoryMatches.length >= limit) {
+    return subCategoryMatches;
+  }
+
+  const excludeIds = [product._id, ...subCategoryMatches.map((p) => p._id)];
+  const remaining = limit - subCategoryMatches.length;
+
+  const categoryMatches = await Product.find({
+    category: product.category,
+    _id: { $nin: excludeIds },
+  })
+    .populate("category", "name slug")
+    .populate("subCategory", "name slug")
+    .limit(remaining);
+
+  return [...subCategoryMatches, ...categoryMatches];
+}
+
+module.exports = {
+  getProducts,
+  getSearchSuggestions,
+  getProductBySlug,
+  getRelatedProducts,
+};

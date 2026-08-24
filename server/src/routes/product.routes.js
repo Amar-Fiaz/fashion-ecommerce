@@ -1,5 +1,9 @@
 const express = require("express");
-const { listProducts, searchSuggestions } = require("../controllers/product.controller");
+const {
+  listProducts,
+  searchSuggestions,
+  getProductDetail,
+} = require("../controllers/product.controller");
 
 const router = express.Router();
 
@@ -7,6 +11,11 @@ const router = express.Router();
 router.get("/", listProducts);
 
 // GET /api/products/search-suggestions?q=
+// Must be registered before the /:slug route below, or Express would
+// match this path as a slug value instead.
 router.get("/search-suggestions", searchSuggestions);
+
+// GET /api/products/:slug
+router.get("/:slug", getProductDetail);
 
 module.exports = router;
