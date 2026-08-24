@@ -1,13 +1,16 @@
-// Reusable product card. Data-driven and presentation-only - no
-// knowledge of where product data comes from, so it works identically
-// with mock data now (Phase 4) or real API data later (Phase 5+).
-// Renders a CSS-only placeholder block when no image is provided.
+import { Link } from "react-router-dom";
+
+// Reusable product card. Data-driven and presentation-only. When the
+// product includes a `slug`, the card links to its detail page
+// (Phase 6); if no slug is present, it renders as a static,
+// non-navigating card (e.g. for future contexts that might not have
+// a real product behind them).
 
 function ProductCard({ product }) {
-  const { name, price, salePrice, image } = product;
+  const { name, price, salePrice, image, slug } = product;
   const onSale = Boolean(salePrice);
 
-  return (
+  const content = (
     <div className="flex flex-col gap-2 group cursor-pointer">
       <div className="aspect-[3/4] w-full bg-neutral-50 border border-neutral-200 rounded-md flex items-center justify-center overflow-hidden">
         {image ? (
@@ -37,6 +40,12 @@ function ProductCard({ product }) {
       </div>
     </div>
   );
+
+  if (slug) {
+    return <Link to={`/shop/${slug}`}>{content}</Link>;
+  }
+
+  return content;
 }
 
 export default ProductCard;

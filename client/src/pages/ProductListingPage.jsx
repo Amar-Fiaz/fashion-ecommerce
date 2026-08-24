@@ -99,6 +99,7 @@ function mapProduct(product) {
     price: product.price,
     salePrice: product.isSale ? product.salePrice : null,
     image: product.images?.[0] || "",
+    slug: product.slug,
   };
 }
 
