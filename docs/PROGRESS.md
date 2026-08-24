@@ -18,7 +18,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 5 — Product Catalog** — COMPLETE
 
-**Phase 6 — Product Details** — Not Started
+**Phase 6 — Product Details** — COMPLETE
+
+**Phase 7 — Authentication** — Not Started
 
 ---
 
@@ -325,6 +327,64 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 6 — Product Details. Not started.
 
+
+---
+
+### Phase 6 — Product Details
+
+**Status:** COMPLETE
+
+**Completed:**
+- Backend: `GET /api/products/:slug` added to `product.service.js`/`product.controller.js`/`product.routes.js`, returning a single product (with populated category/subcategory) plus its related products in one response. 404 handling returns the standard error envelope for unknown slugs.
+- Related products logic: same subcategory first, falling back to same category if fewer than the target count exist — no new `Product` field required.
+- Route ordering confirmed safe: `/search-suggestions` remains registered before `/:slug` in `product.routes.js`, preventing route shadowing.
+- Frontend: `getProductBySlug` RTK Query endpoint added to `productApi.js`.
+- `ProductCard` updated to navigate to `/shop/:slug` when a `slug` is present, wiring both the `/shop` listing and the Phase 4 homepage's product cards to real navigation.
+- `ImageGallery` component built — renders a placeholder block when no product images exist yet (no Cloudinary upload flow until a later phase), with thumbnail-strip support ready for when real images are added.
+- `VariantSelector` component built — derives size/color options from the product's actual embedded `variants` array, disables out-of-stock combinations, and shows live stock-availability messaging. "Add to Cart" is present but intentionally non-functional (Phase 8 scope).
+- `SizeGuide` component built — generic static size chart (illustrative measurements), expandable/collapsible.
+- `RecentlyViewed` utility (`client/src/utils/recentlyViewed.js`) and display component built — client-side only via `localStorage`, capped at the last 8 products, no backend model involved.
+- `ProductDetailPage` assembled from all of the above and wired at the `/shop/:slug` route.
+
+**Decisions resolved during this phase:**
+- Detail page route: `/shop/:slug`.
+- Size guide: generic static chart, not product-specific measurement data.
+- Related products: same subcategory first, category fallback second.
+- Recently viewed: `localStorage`, client-side only, capped at 8.
+
+**Files Created:**
+- `client/src/utils/recentlyViewed.js`
+- `client/src/features/product/ImageGallery.jsx`, `VariantSelector.jsx`, `SizeGuide.jsx`, `RecentlyViewed.jsx`
+- `client/src/pages/ProductDetailPage.jsx`
+
+**Files Modified:**
+- `server/src/services/product.service.js`, `server/src/controllers/product.controller.js`, `server/src/routes/product.routes.js`
+- `client/src/features/product/productApi.js`
+- `client/src/components/ProductCard.jsx`
+- `client/src/pages/ProductListingPage.jsx`
+- `client/src/routes/AppRoutes.jsx`
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- Product detail endpoint and 404 handling verified directly via API; search-suggestions regression-checked to confirm route ordering stayed correct.
+- Navigation from both `/shop` and the homepage to `/shop/:slug` verified working.
+- Variant selection, stock-aware disabling, and "not available"/"in stock"/"out of stock" messaging all verified against the seeded variant data.
+- Size guide expand/collapse verified.
+- Related products verified showing sensible same-subcategory/category results.
+- Recently viewed verified populating, persisting across a full page refresh (confirming `localStorage`), and excluding the current product.
+- Unknown slug (`/shop/does-not-exist`) verified showing a graceful "Product not found" message.
+- Regression-checked: Phase 5's `/shop` listing/filter/sort/search/pagination and Phase 4's homepage both confirmed unaffected.
+- One build error encountered and fixed during this phase: an incorrect relative import path in `RecentlyViewed.jsx` (`../home/ProductSection` → `../../components/home/ProductSection`); one user-side navigation confusion (visiting `/homepage` instead of `/`) clarified as expected router behavior, not a defect.
+- All required breakpoints (360/390/430/768/1024/1280/1440/1920) checked — no horizontal overflow; gallery/details stack correctly below `lg`.
+- Browser console and backend terminal checked — no errors.
+- All work committed incrementally to Git in 7 logical groups and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- "Add to Cart" is present but intentionally non-functional — real cart logic is Phase 8 scope, not a defect.
+- The header logo ("FASHION CO") is not yet wired as a link back to `/` — noted during this phase's testing but not part of Phase 6's scope; can be addressed as a small fix in a later phase if desired.
+
+**Next Phase:** Phase 7 — Authentication. Not started.
+
 ---
 
 ## Phase History Template
@@ -351,4 +411,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 5 are all complete and verified. The client and server foundations are implemented and tested, the design system is proven, the global site chrome is built, and the product catalog is now fully real and API-driven — Category/SubCategory/Product models, seeded data, filtering, sorting, search, and pagination all working end-to-end at `/shop`. Phase 6 — Product Details has not started. This file will be updated again when Phase 6 begins.
+Phase 0 through Phase 6 are all complete and verified. The client and server foundations are implemented and tested, the design system is proven, the global site chrome is built, the product catalog is fully real and API-driven, and the product detail experience (gallery, variant selection with stock awareness, size guide, related products, recently viewed) is complete at `/shop/:slug`. Phase 7 — Authentication has not started. This file will be updated again when Phase 7 begins.
