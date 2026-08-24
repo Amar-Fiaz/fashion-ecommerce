@@ -1,8 +1,5 @@
 import { apiSlice } from "../../api/apiSlice";
 
-// Catalog-related RTK Query endpoints, injected into the shared base
-// API slice. Kept in features/product/ since this is product-domain
-// logic, per ARCHITECTURE.md's feature-based frontend structure.
 export const productApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     getProducts: builder.query({
@@ -20,6 +17,9 @@ export const productApi = apiSlice.injectEndpoints({
     getCategories: builder.query({
       query: () => "/categories",
     }),
+    getProductBySlug: builder.query({
+      query: (slug) => `/products/${slug}`,
+    }),
   }),
   overrideExisting: false,
 });
@@ -28,4 +28,5 @@ export const {
   useGetProductsQuery,
   useLazyGetSearchSuggestionsQuery,
   useGetCategoriesQuery,
+  useGetProductBySlugQuery,
 } = productApi;
