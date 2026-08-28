@@ -1,9 +1,13 @@
 require("dotenv").config();
 
-// Centralized access to backend environment variables.
-// Warns loudly at startup if a required variable is missing,
-// rather than letting the app run in an undefined state.
-const required = ["PORT", "MONGODB_URI", "NODE_ENV", "CLIENT_URL"];
+const required = [
+  "PORT",
+  "MONGODB_URI",
+  "NODE_ENV",
+  "CLIENT_URL",
+  "JWT_ACCESS_SECRET",
+  "JWT_REFRESH_SECRET",
+];
 
 for (const key of required) {
   if (!process.env[key]) {
@@ -18,4 +22,8 @@ module.exports = {
   MONGODB_URI: process.env.MONGODB_URI,
   NODE_ENV: process.env.NODE_ENV || "development",
   CLIENT_URL: process.env.CLIENT_URL,
+  JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET,
+  JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
+  JWT_ACCESS_EXPIRES_IN: process.env.JWT_ACCESS_EXPIRES_IN || "15m",
+  JWT_REFRESH_EXPIRES_IN: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
 };
