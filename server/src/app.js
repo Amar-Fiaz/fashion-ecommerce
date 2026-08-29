@@ -7,6 +7,7 @@ const productRoutes = require("./routes/product.routes");
 const categoryRoutes = require("./routes/category.routes");
 const authRoutes = require("./routes/auth.routes");
 const adminAuthRoutes = require("./routes/adminAuth.routes");
+const userRoutes = require("./routes/user.routes");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
 
@@ -27,6 +28,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/admin/auth", adminAuthRoutes);
+app.use("/api/users", userRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
