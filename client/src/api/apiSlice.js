@@ -1,30 +1,76 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { API_BASE_URL } from "../config/env";
+import { setCredentials, clearCredentials } from "../features/auth/authSlice";
+import { setAdminCredentials, clearAdminCredentials } from "../features/auth/adminAuthSlice";
 
-// credentials: "include" ensures the httpOnly refreshToken /
-// adminRefreshToken cookies are sent and received on cross-port
-// requests during development (client on 5173, server on 5000).
-//
-// prepareHeaders attaches the correct in-memory access token based on
-// which slice of auth the endpoint belongs to - admin endpoints (by
-// naming convention, e.g. "adminLogin") use adminAuth's token,
-// everything else uses the customer auth token. This keeps the two
-// tokens from ever crossing into the wrong request.
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: API_BASE_URL,
+  credentials: "include",
+  prepareHeaders: (headers, { getState, endpoint }) => {
+    const state = getState();
+    const isAdminEndpoint = endpoint.toLowerCase().startsWith("admin");
+    const token = isAdminEndpoint
+      ? state.adminAuth?.accessToken
+      : state.auth?.accessToken;
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return headers;
+  },
+});
+
+// Endpoints that must NEVER trigger the reauth-retry logic below -
+// if the refresh request itself fails with 401, that means the
+// session is genuinely over. Retrying it would just call itself
+// again, endlessly.
+const REFRESH_ENDPOINT_NAMES = ["refreshUser", "adminRefresh"];
+
+async function baseQueryWithReauth(args, apiState, extraOptions) {
+  const result = await rawBaseQuery(args, apiState, extraOptions);
+
+  const isRefreshCall = REFRESH_ENDPOINT_NAMES.includes(apiState.endpoint);
+
+  if (result.error && result.error.status === 401 && !isRefreshCall) {
+    const isAdminEndpoint = apiState.endpoint.toLowerCase().startsWith("admin");
+    const refreshUrl = isAdminEndpoint ? "/admin/auth/refresh" : "/auth/refresh";
+
+    const refreshResult = await rawBaseQuery(
+      { url: refreshUrl, method: "POST" },
+      apiState,
+      extraOptions
+    );
+
+    if (refreshResult.data) {
+      if (isAdminEndpoint) {
+        apiState.dispatch(
+          setAdminCredentials({
+            user: refreshResult.data.user,
+            accessToken: refreshResult.data.accessToken,
+          })
+        );
+      } else {
+        apiState.dispatch(
+          setCredentials({
+            user: refreshResult.data.user,
+            accessToken: refreshResult.data.accessToken,
+          })
+        );
+      }
+      return rawBaseQuery(args, apiState, extraOptions);
+    }
+
+    if (isAdminEndpoint) {
+      apiState.dispatch(clearAdminCredentials());
+    } else {
+      apiState.dispatch(clearCredentials());
+    }
+  }
+
+  return result;
+}
+
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({
-    baseUrl: API_BASE_URL,
-    credentials: "include",
-    prepareHeaders: (headers, { getState, endpoint }) => {
-      const state = getState();
-      const isAdminEndpoint = endpoint.toLowerCase().startsWith("admin");
-      const token = isAdminEndpoint
-        ? state.adminAuth?.accessToken
-        : state.auth?.accessToken;
-      if (token) headers.set("Authorization", `Bearer ${token}`);
-      return headers;
-    },
-  }),
+  tagTypes: ["Profile", "Addresses"],
+  baseQuery: baseQueryWithReauth,
   endpoints: (builder) => ({
     getHealth: builder.query({
       query: () => "/health",
