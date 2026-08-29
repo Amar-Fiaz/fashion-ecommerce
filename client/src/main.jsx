@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import { store } from "./app/store";
 import ErrorBoundary from "./components/ErrorBoundary";
+import AuthInitializer from "./features/auth/AuthInitializer";
 import App from "./App.jsx";
 import "./index.css";
 
@@ -12,7 +13,9 @@ createRoot(document.getElementById("root")).render(
     <ErrorBoundary>
       <Provider store={store}>
         <BrowserRouter>
-          <App />
+          <AuthInitializer>
+            <App />
+          </AuthInitializer>
         </BrowserRouter>
       </Provider>
     </ErrorBoundary>
