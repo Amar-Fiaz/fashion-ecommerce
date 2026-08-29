@@ -1,17 +1,26 @@
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { Link } from "react-router-dom";
 import Container from "../Container";
 import MegaMenu from "./MegaMenu";
 import MobileNav from "./MobileNav";
 import SearchBar from "../../features/product/SearchBar";
 import navigationCategories from "./navigationData";
+import { useLogoutUserMutation } from "../../features/auth/authApi";
 
-// Global site header. Search is now functional (Phase 5) via
-// SearchBar. Account and cart icons remain non-functional placeholders
-// - real behavior arrives in Phase 7 (account) and Phase 8 (cart).
 function Header() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+
+  const { user, accessToken } = useSelector((state) => state.auth);
+  const [logoutUser] = useLogoutUserMutation();
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setAccountMenuOpen(false);
+  };
 
   return (
     <header className="relative border-b border-neutral-200 bg-white">
@@ -33,9 +42,9 @@ function Header() {
             </svg>
           </button>
 
-          <span className="text-xl font-bold text-black tracking-wide">
+          <Link to="/" className="text-xl font-bold text-black tracking-wide">
             FASHION CO
-          </span>
+          </Link>
         </div>
 
         <nav
@@ -78,13 +87,7 @@ function Header() {
               onClick={() => setSearchOpen((prev) => !prev)}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle
-                  cx="8.5"
-                  cy="8.5"
-                  r="5.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
                 <path
                   d="M17 17L13 13"
                   stroke="currentColor"
@@ -95,23 +98,58 @@ function Header() {
             </button>
             {searchOpen && <SearchBar onClose={() => setSearchOpen(false)} />}
           </div>
-          <button type="button" aria-label="Account">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-              <circle
-                cx="10"
-                cy="6.5"
-                r="3.5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
-              <path
-                d="M3 17c1.5-3.5 4.5-5 7-5s5.5 1.5 7 5"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
+
+          <div className="relative">
+            <button
+              type="button"
+              aria-label="Account"
+              onClick={() => setAccountMenuOpen((prev) => !prev)}
+            >
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <circle cx="10" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d="M3 17c1.5-3.5 4.5-5 7-5s5.5 1.5 7 5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </button>
+            {accountMenuOpen && (
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-neutral-200 rounded-md shadow-lg p-3 z-30">
+                {accessToken ? (
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm text-neutral-800">Hi, {user?.name}</p>
+                    <button
+                      type="button"
+                      className="text-sm text-left text-neutral-500 hover:text-black"
+                      onClick={handleLogout}
+                    >
+                      Log out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      to="/login"
+                      className="text-sm text-neutral-800 hover:text-black"
+                      onClick={() => setAccountMenuOpen(false)}
+                    >
+                      Log in
+                    </Link>
+                    <Link
+                      to="/register"
+                      className="text-sm text-neutral-800 hover:text-black"
+                      onClick={() => setAccountMenuOpen(false)}
+                    >
+                      Create account
+                    </Link>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <button type="button" aria-label="Cart">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
@@ -120,11 +158,7 @@ function Header() {
                 strokeWidth="1.5"
                 strokeLinejoin="round"
               />
-              <path
-                d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
+              <path d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7" stroke="currentColor" strokeWidth="1.5" />
             </svg>
           </button>
         </div>
