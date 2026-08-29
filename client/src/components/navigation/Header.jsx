@@ -62,7 +62,7 @@ function Header() {
                 className="text-sm font-medium text-black hover:text-accent transition-colors"
                 onClick={() =>
                   setActiveCategory((prev) =>
-                    prev === category.slug ? null : category.slug
+                    prev === category.slug ? null : category.slug,
                   )
                 }
               >
@@ -87,7 +87,13 @@ function Header() {
               onClick={() => setSearchOpen((prev) => !prev)}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+                <circle
+                  cx="8.5"
+                  cy="8.5"
+                  r="5.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
                 <path
                   d="M17 17L13 13"
                   stroke="currentColor"
@@ -106,7 +112,13 @@ function Header() {
               onClick={() => setAccountMenuOpen((prev) => !prev)}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle cx="10" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
+                <circle
+                  cx="10"
+                  cy="6.5"
+                  r="3.5"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                />
                 <path
                   d="M3 17c1.5-3.5 4.5-5 7-5s5.5 1.5 7 5"
                   stroke="currentColor"
@@ -120,6 +132,13 @@ function Header() {
                 {accessToken ? (
                   <div className="flex flex-col gap-2">
                     <p className="text-sm text-neutral-800">Hi, {user?.name}</p>
+                    <Link
+                      to="/profile"
+                      className="text-sm text-neutral-500 hover:text-black"
+                      onClick={() => setAccountMenuOpen(false)}
+                    >
+                      My Profile
+                    </Link>
                     <button
                       type="button"
                       className="text-sm text-left text-neutral-500 hover:text-black"
@@ -158,7 +177,11 @@ function Header() {
                 strokeWidth="1.5"
                 strokeLinejoin="round"
               />
-              <path d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7" stroke="currentColor" strokeWidth="1.5" />
+              <path
+                d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              />
             </svg>
           </button>
         </div>
