@@ -20,7 +20,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 6 — Product Details** — COMPLETE
 
-**Phase 7 — Authentication** — Not Started
+**Phase 7 — Authentication** — COMPLETE
+
+**Phase 8 — Cart & Wishlist** — Not Started
 
 ---
 
@@ -385,6 +387,91 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 7 — Authentication. Not started.
 
+
+---
+
+### Phase 7 — Authentication
+
+**Status:** COMPLETE
+
+**Completed:**
+- `User` model created with `role` (`customer`/`admin`), email verification fields, password reset fields, and an embedded `addresses` array (customer's personal address book, following the same embedding pattern as `Product.variants`).
+- Auth utilities: password hashing/comparison (bcrypt), JWT access/refresh token signing/verification, and email-token generation/hashing.
+- Ethereal Email (fake SMTP testing service) wired up via Nodemailer for development — verification and password-reset emails generate console-logged preview URLs rather than delivering anywhere real.
+- Admin-creation CLI script (`createAdmin.js`) added, mirroring the Phase 5 seed-script pattern, since no admin dashboard UI exists yet.
+- Full customer auth API built (`/api/auth/...`): register, login (with enforced email verification), logout, refresh, email verification, forgot/reset password — all through the layered service/controller/route pattern, with Zod request validation.
+- Structurally separate admin auth API built (`/api/admin/auth/...`): login, logout, refresh — using a distinctly named cookie (`adminRefreshToken`) and confirmed to reject valid customer credentials, per `ARCHITECTURE.md` Section 5.
+- `protect`/`authorize` middleware added for route protection (used by the profile/address endpoints, this phase's first real consumer).
+- Frontend: separate Redux slices (`authSlice`, `adminAuthSlice`) holding in-memory access tokens only (never `localStorage`), per the approved security posture; RTK Query endpoints for both; a `baseQueryWithReauth` wrapper that automatically retries a request once after a silent token refresh on a 401, with a safeguard to prevent the refresh endpoint from retrying itself.
+- `AuthInitializer` performs a silent refresh on app load using the httpOnly cookie, restoring a logged-in user's session across page refreshes.
+- Customer-facing pages: register, login, forgot password, reset password, verify email.
+- Admin login page and a temporary admin verification page (`AdminPlaceholderPage`, explicitly marked for replacement in Phase 12).
+- Customer profile page: editable name, read-only email, and full saved-address management (add/edit/delete, with single-default enforcement).
+- `BaseLayout` refactored to the `<Outlet />` pattern so admin routes can render without customer header/nav/footer, per the structural-separation principle.
+- `ProtectedRoute` guard added for `/profile`, redirecting to `/login` if no active session (waiting for the initial silent-refresh check to complete first, to avoid a false redirect).
+- Header account menu wired to real auth state (login/logout, "My Profile" link).
+
+**Bugs found and fixed during this phase (via testing):**
+- `Input.jsx` didn't forward refs, silently breaking React Hook Form's `register()` wiring — fixed with `forwardRef`.
+- Access token expiry (15 minutes) caused silent `401`s on profile/address requests with no recovery — fixed by adding automatic reauth-on-401 retry logic.
+- The reauth logic initially could retry the refresh endpoint against itself in a loop when the refresh itself failed — fixed by explicitly excluding refresh endpoints from the retry logic.
+- `ProtectedRoute.jsx` briefly contained a mistaken copy of `AppRoutes.jsx`'s content instead of the actual guard component — corrected.
+- `AddressForm.jsx` was missing the `isDefault` checkbox entirely, making the backend's default-address feature inaccessible from the UI — added.
+
+**Decisions resolved during this phase:**
+- Ethereal Email for development; real provider selection deferred (same pattern as payment gateway/hosting).
+- Email verification enforced at login, not optional.
+- Access token: in-memory Redux state only, with silent refresh via httpOnly cookie.
+- Admin account creation via a manual CLI script, mirroring the Phase 5 seed pattern.
+- Refresh tokens are stateless (signature-verified only, no server-side session store/revocation list) — noted as a future enhancement if forced session revocation is ever needed.
+- Saved addresses embedded on `User` for Phase 7's profile scope; their relationship to Phase 9's checkout `Address` model is explicitly left as a Phase 9 decision.
+
+**Files Created:**
+- `server/src/models/User.js`
+- `server/src/utils/password.js`, `jwt.js`, `emailTokens.js`, `sendEmail.js`, `createAdmin.js`
+- `server/src/config/email.js`
+- `server/src/validators/auth.validators.js`, `user.validators.js`
+- `server/src/middlewares/validate.js`, `auth.js`
+- `server/src/services/auth.service.js`, `adminAuth.service.js`, `user.service.js`
+- `server/src/controllers/auth.controller.js`, `adminAuth.controller.js`, `user.controller.js`
+- `server/src/routes/auth.routes.js`, `adminAuth.routes.js`, `user.routes.js`
+- `client/src/features/auth/` (`authSlice.js`, `adminAuthSlice.js`, `authApi.js`, `adminAuthApi.js`, `AuthInitializer.jsx`)
+- `client/src/features/user/` (`userApi.js`, `AddressForm.jsx`)
+- `client/src/components/ProtectedRoute.jsx`
+- `client/src/pages/RegisterPage.jsx`, `LoginPage.jsx`, `ForgotPasswordPage.jsx`, `ResetPasswordPage.jsx`, `VerifyEmailPage.jsx`, `AdminLoginPage.jsx`, `AdminPlaceholderPage.jsx`, `ProfilePage.jsx`
+
+**Files Modified:**
+- `server/src/app.js` (cookie-parser, auth/admin-auth/user routes wired in)
+- `server/.env.example`, `server/src/config/env.js` (JWT variables)
+- `client/src/components/Input.jsx` (forwardRef fix)
+- `client/src/layouts/BaseLayout.jsx` (Outlet pattern)
+- `client/src/routes/AppRoutes.jsx` (auth routes, protected route)
+- `client/src/api/apiSlice.js` (auth headers, reauth-on-401 logic)
+- `client/src/app/store.js`, `client/src/main.jsx` (auth state wiring)
+- `client/src/components/navigation/Header.jsx` (real auth state, profile link)
+- `docs/DATABASE.md` (User model added)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- Full backend auth flow (register/verify/login/refresh/forgot/reset/validation) tested exhaustively via Postman — 8 distinct test cases, all passing.
+- Admin auth structural separation confirmed at the API level (customer credentials correctly rejected by admin endpoint) and re-confirmed in the actual UI.
+- Full frontend flow tested end-to-end in-browser: register → verify → login → session persistence across refresh → logout; forgot/reset password; admin login → session persistence → logout; admin rejection of customer credentials.
+- Profile and address management fully tested: name update with persistence, add/edit/delete addresses, single-default enforcement.
+- Route protection tested: unauthenticated access to `/profile` redirects to `/login`; authenticated access works; refresh while authenticated does not incorrectly redirect.
+- Cross-session isolation tested: simultaneous customer and admin sessions in the same browser do not interfere with each other; logging out of one leaves the other intact.
+- Full regression pass confirmed Phases 1–6 (homepage, catalog, filtering/sorting/search, product details, variants, related/recently-viewed) all still function correctly.
+- All required breakpoints checked across all new and existing pages.
+- Browser console and backend terminal checked throughout — no unexplained errors.
+- Five real bugs found and fixed during testing (listed above) — all retested and confirmed resolved after fixing.
+- All work committed incrementally to Git across many logical commits and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- No server-side refresh token revocation (stateless refresh tokens) — acceptable for current scope; noted as a possible future enhancement.
+- No "forgot password" equivalent for admin accounts — acceptable, since admin accounts are currently created only via the manual CLI script; can be revisited when Phase 12 builds the real admin panel.
+- `AdminPlaceholderPage` is explicitly temporary and will be fully replaced in Phase 12.
+
+**Next Phase:** Phase 8 — Cart & Wishlist. Not started.
+
 ---
 
 ## Phase History Template
@@ -411,4 +498,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 6 are all complete and verified. The client and server foundations are implemented and tested, the design system is proven, the global site chrome is built, the product catalog is fully real and API-driven, and the product detail experience (gallery, variant selection with stock awareness, size guide, related products, recently viewed) is complete at `/shop/:slug`. Phase 7 — Authentication has not started. This file will be updated again when Phase 7 begins.
+Phase 0 through Phase 7 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, and product detail experience are all in place, and full authentication is now live — customer registration/login/logout with enforced email verification, forgot/reset password, structurally separate admin authentication, in-memory access tokens with automatic silent refresh, and customer profile/address management. Phase 8 — Cart & Wishlist has not started. This file will be updated again when Phase 8 begins.

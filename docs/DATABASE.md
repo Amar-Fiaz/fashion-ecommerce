@@ -44,7 +44,7 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 
 | Model | Status | Phase Introduced | Notes |
 |---|---|---|---|
-| User | Not Created | Phase 7 | Includes `role` field (`customer` \| `admin`) |
+| User | Created | Phase 7 | Includes `role` field (`customer` \| `admin`); embedded `addresses` array |
 | Product | Created | Phase 5 | Embedded variants (size/color/stock/sku); text index on name/description/tags |
 | Category | Created | Phase 5 | |
 | SubCategory | Created | Phase 5 | References parent Category by ObjectId |
@@ -98,6 +98,37 @@ Compound unique index on `(category, slug)` — a subcategory slug only needs to
 | `isFeatured` / `isNewArrival` / `isSale` | Boolean | |
 | `averageRating` / `reviewCount` | Number | Present on schema now; only written to starting Phase 11 |
 | `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+### User
+
+| Field | Type | Notes |
+|---|---|---|
+| `name` | String | Required |
+| `email` | String | Required, unique, indexed |
+| `password` | String | bcrypt hash, never plaintext |
+| `role` | String | Enum: `customer` \| `admin`; default `customer` |
+| `isEmailVerified` | Boolean | Default `false`; enforced at login |
+| `emailVerificationTokenHash` / `emailVerificationExpires` | String / Date | Hashed token, never stored raw |
+| `passwordResetTokenHash` / `passwordResetExpires` | String / Date | Hashed token, never stored raw |
+| `addresses` | [EmbeddedAddress] | Embedded array — customer's personal address book (see below) |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+**Embedded address sub-schema** (`addresses` array, no separate collection — see `ARCHITECTURE.md` Section 8's embedding pattern, applied here the same way as `Product.variants`):
+
+| Field | Type | Notes |
+|---|---|---|
+| `label` | String | Optional, e.g. "Home", "Work" |
+| `fullName` | String | Required |
+| `line1` | String | Required |
+| `line2` | String | Optional |
+| `city` | String | Required |
+| `state` | String | Optional |
+| `postalCode` | String | Required |
+| `country` | String | Required |
+| `phone` | String | Optional |
+| `isDefault` | Boolean | Only one address may be `true` at a time; enforced in `user.service.js` |
+
+**Note on Phase 9:** this embedded address book is for the customer's personal profile management (Phase 7 scope). How Phase 9's checkout flow relates to these (referencing them directly, copying a snapshot, or promoting to a standalone `Address` collection) is a decision for Phase 9, not decided here.
 
 **Embedded variant sub-schema** (`variants` array, no separate collection):
 
