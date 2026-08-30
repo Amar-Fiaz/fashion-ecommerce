@@ -14,6 +14,7 @@ const schema = z.object({
   postalCode: z.string().trim().min(1, "Postal code is required"),
   country: z.string().trim().min(1, "Country is required"),
   phone: z.string().trim().optional(),
+  isDefault: z.boolean().optional(),
 });
 
 function AddressForm({ initialValues, onSubmit, onCancel, isSubmitting }) {
@@ -46,6 +47,11 @@ function AddressForm({ initialValues, onSubmit, onCancel, isSubmitting }) {
         <Input id="country" label="Country" error={errors.country?.message} {...register("country")} />
       </div>
       <Input id="phone" label="Phone (optional)" {...register("phone")} />
+
+      <label className="flex items-center gap-2 text-sm text-neutral-800">
+        <input type="checkbox" {...register("isDefault")} />
+        Set as default address
+      </label>
 
       <div className="flex gap-3 mt-2">
         <Button type="submit" variant="primary" disabled={isSubmitting}>
