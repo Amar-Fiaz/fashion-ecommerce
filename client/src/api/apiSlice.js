@@ -17,10 +17,6 @@ const rawBaseQuery = fetchBaseQuery({
   },
 });
 
-// Endpoints that must NEVER trigger the reauth-retry logic below -
-// if the refresh request itself fails with 401, that means the
-// session is genuinely over. Retrying it would just call itself
-// again, endlessly.
 const REFRESH_ENDPOINT_NAMES = ["refreshUser", "adminRefresh"];
 
 async function baseQueryWithReauth(args, apiState, extraOptions) {
@@ -69,7 +65,7 @@ async function baseQueryWithReauth(args, apiState, extraOptions) {
 
 export const apiSlice = createApi({
   reducerPath: "api",
-  tagTypes: ["Profile", "Addresses"],
+  tagTypes: ["Profile", "Addresses", "Cart", "Wishlist"],
   baseQuery: baseQueryWithReauth,
   endpoints: (builder) => ({
     getHealth: builder.query({
