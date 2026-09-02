@@ -29,8 +29,8 @@ Orders must store a **copy** of product name, price, image, and selected variant
 ### Cart Duality
 
 - Authenticated users have a cart persisted in the database (`Cart` model), tied to their user ID.
-- Guest users have a cart maintained client-side/session-based, with no database record until they authenticate.
-- On login, a guest cart must be merged into the user's persisted cart. Detailed merge behavior is designed at the start of Phase 8, not here.
+- Guest users have a cart maintained client-side (localStorage), with no database record until they authenticate.
+- On login, a guest cart is merged into the user's persisted cart: matching product+variant lines have their quantities summed (capped at current stock), new lines are appended, and the guest cart is cleared only after a successful merge. Implemented in Phase 8 — see the `Cart` model below.
 
 ### Variant Modeling
 
@@ -48,8 +48,8 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | Product | Created | Phase 5 | Embedded variants (size/color/stock/sku); text index on name/description/tags |
 | Category | Created | Phase 5 | |
 | SubCategory | Created | Phase 5 | References parent Category by ObjectId |
-| Cart | Not Created | Phase 8 | See Cart Duality above |
-| Wishlist | Not Created | Phase 8 | |
+| Cart | Created | Phase 8 | See Cart Duality above; embedded items, no stored price (computed live) |
+| Wishlist | Created | Phase 8 | Product-level only, no variant tracking |
 | Address | Not Created | Phase 9 | |
 | Order | Not Created | Phase 9 | Snapshotted product data — see above |
 | Payment | Not Created | Phase 10 | Provider-agnostic fields; gateway TBD |
@@ -99,6 +99,17 @@ Compound unique index on `(category, slug)` — a subcategory slug only needs to
 | `averageRating` / `reviewCount` | Number | Present on schema now; only written to starting Phase 11 |
 | `createdAt` / `updatedAt` | Date | Automatic timestamps |
 
+**Embedded variant sub-schema** (`variants` array, no separate collection):
+
+| Field | Type | Notes |
+|---|---|---|
+| `size` | String | Required |
+| `color` | String | Required |
+| `stock` | Number | Required, min 0 |
+| `sku` | String | Required |
+
+Indexes: text index on `(name, description, tags)` for search; compound index on `(category, subCategory)` for filtering.
+
 ### User
 
 | Field | Type | Notes |
@@ -130,19 +141,35 @@ Compound unique index on `(category, slug)` — a subcategory slug only needs to
 
 **Note on Phase 9:** this embedded address book is for the customer's personal profile management (Phase 7 scope). How Phase 9's checkout flow relates to these (referencing them directly, copying a snapshot, or promoting to a standalone `Address` collection) is a decision for Phase 9, not decided here.
 
-**Embedded variant sub-schema** (`variants` array, no separate collection):
+### Cart
 
 | Field | Type | Notes |
 |---|---|---|
-| `size` | String | Required |
-| `color` | String | Required |
-| `stock` | Number | Required, min 0 |
-| `sku` | String | Required |
+| `user` | ObjectId (ref: User) | Required, unique — one cart per user |
+| `items` | [EmbeddedCartItem] | Embedded array — see below |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
 
-Indexes: text index on `(name, description, tags)` for search; compound index on `(category, subCategory)` for filtering.
+**Embedded cart item sub-schema** (`items` array):
+
+| Field | Type | Notes |
+|---|---|---|
+| `product` | ObjectId (ref: Product) | Required |
+| `variantSku` | String | Required — identifies the specific variant within the product's embedded `variants` array |
+| `size` / `color` | String | Required — denormalized from the variant at add-time for convenience |
+| `quantity` | Number | Required, min 1 |
+
+No price is stored on cart items — prices are computed live from the referenced `Product` at read time, so the cart always reflects current pricing. Final, backend-verified order totals (including discounts/coupons/shipping) are Phase 9's responsibility, not this model's.
+
+### Wishlist
+
+| Field | Type | Notes |
+|---|---|---|
+| `user` | ObjectId (ref: User) | Required, unique — one wishlist per user |
+| `products` | [ObjectId] (ref: Product) | Product-level only — no size/color tracking, per the approved Phase 8 decision |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
 
 ---
 
 ## Status
 
-This is a skeleton document as of Phase 0. It will be populated incrementally as each phase creates its required models. It must be kept in sync with the actual contents of `/server/models` at all times — if they diverge, this file is wrong and must be corrected.
+Models created so far: `Category`, `SubCategory`, `Product` (Phase 5), `User` (Phase 7), `Cart` and `Wishlist` (Phase 8). Remaining planned models (`Address`, `Order`, `Payment`, `Review`, `Coupon`, `Notification`, `Banner`, `NewsletterSubscriber`) are not yet created and will be added to this file, with full field-level detail, only when the phase that requires them begins. This file is kept in sync with the actual contents of `/server/models` at all times — if they diverge, this file is wrong and must be corrected.

@@ -22,7 +22,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 7 — Authentication** — COMPLETE
 
-**Phase 8 — Cart & Wishlist** — Not Started
+**Phase 8 — Cart & Wishlist** — COMPLETE
+
+**Phase 9 — Checkout & Orders** — Not Started
 
 ---
 
@@ -471,6 +473,69 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 - `AdminPlaceholderPage` is explicitly temporary and will be fully replaced in Phase 12.
 
 **Next Phase:** Phase 8 — Cart & Wishlist. Not started.
+
+
+---
+
+### Phase 8 — Cart & Wishlist
+
+**Status:** COMPLETE
+
+**Completed:**
+- `Cart` and `Wishlist` models created with embedded items (no separate item/product-line collections), matching the established embedding pattern from `Product.variants`/`User.addresses`.
+- Backend cart API (`/api/cart/...`, protected): get cart, add item, update quantity, remove item, and merge (for guest→login transitions) — all with live-computed pricing (no stored price snapshots) and backend stock validation against the product's current embedded variant data on every mutation.
+- Backend wishlist API (`/api/wishlist/...`, protected, login required per the approved decision): get, add, remove — product-level only, duplicate-add correctly guarded against.
+- Guest cart implemented entirely client-side: Redux state persisted to `localStorage` (mirroring the Phase 6 `recentlyViewed.js` pattern), with add/update/remove reducers and stock-aware quantity capping.
+- Merge-on-login: a dedicated hook watches the login transition and, if the guest cart has items, calls the backend merge endpoint and clears the guest cart on success (leaving it intact if the merge fails, rather than silently discarding items).
+- `useCart()` hook unifies guest and authenticated cart access behind one consistent interface, so UI components don't need to branch on auth state themselves.
+- Frontend UI: mini cart drawer (right-side slide-in, matching the `MobileNav` pattern), full `/cart` page (quantity editing, removal, subtotal), and `/wishlist` page — all with a non-functional "Checkout" button, correctly deferred to Phase 9.
+- "Add to Cart" wired into `VariantSelector` (previously non-functional since Phase 6); wishlist toggle wired into the product detail page, redirecting to `/login` if attempted while logged out.
+- Header cart icon shows a live item-count badge and opens the mini cart; account menu includes a "My Wishlist" link.
+
+**Decisions resolved during this phase:**
+- Guest cart storage: `localStorage`.
+- Cart merge-on-login: sum quantities for matching lines, capped at current stock; append new lines; guest cart cleared only after a successful merge.
+- Wishlist requires login — no guest wishlist support.
+- Wishlist is product-level, not variant-level.
+- Mini cart UX: right-side slide-in drawer.
+
+**Files Created:**
+- `server/src/models/Cart.js`, `Wishlist.js`
+- `server/src/validators/cart.validators.js`, `wishlist.validators.js`
+- `server/src/services/cart.service.js`, `wishlist.service.js`
+- `server/src/controllers/cart.controller.js`, `wishlist.controller.js`
+- `server/src/routes/cart.routes.js`, `wishlist.routes.js`
+- `client/src/features/cart/guestCart.js`, `guestCartSlice.js`, `cartApi.js`, `useCart.js`, `useMergeCartOnLogin.js`, `MiniCart.jsx`
+- `client/src/pages/CartPage.jsx`, `WishlistPage.jsx`
+
+**Files Modified:**
+- `server/src/app.js` (cart/wishlist routes wired in)
+- `client/src/app/store.js` (guest cart reducer)
+- `client/src/api/apiSlice.js` (Cart/Wishlist cache tags)
+- `client/src/App.jsx` (merge-on-login hook wired in)
+- `client/src/features/product/VariantSelector.jsx` (Add to Cart wired)
+- `client/src/pages/ProductDetailPage.jsx` (wishlist toggle wired)
+- `client/src/routes/AppRoutes.jsx` (`/cart`, `/wishlist` routes)
+- `client/src/components/navigation/Header.jsx` (cart icon/badge, mini cart, wishlist link)
+- `docs/DATABASE.md` (Cart and Wishlist models added)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- Full backend cart/wishlist API tested via Postman: empty cart, add item, stock-limit rejection, quantity update, removal, merge, wishlist add/get/remove, and auth-requirement enforcement — all passing (8 test cases).
+- Full guest cart → login → merge flow tested end-to-end in-browser multiple times, including confirming `localStorage`'s `guestCart` key is correctly populated while a guest and correctly cleared after a successful merge.
+- Multi-tab consistency confirmed: a cart change in one authenticated tab is reflected in another tab after refresh, confirming the cart is genuinely backend-driven, not stale client state.
+- Wishlist duplicate-add correctly prevented; UI correctly reflects wishlisted state on return visits.
+- Stock validation confirmed working (rejecting over-quantity adds with a clean error, not a crash).
+- Full regression pass confirmed Phases 1–7 unaffected (homepage, catalog, product details, auth, profile/addresses all still function correctly).
+- All required breakpoints checked, including the new mini cart drawer, `/cart`, and `/wishlist` pages.
+- Two false-alarm investigations during testing: browser-extension-injected console errors (unrelated to the app) and an initial `400` that did not reproduce on a clean retest (very likely a legitimate stock-validation response from edge-case testing, not a bug).
+- Browser console and backend terminal checked throughout — no unexplained errors.
+- All work committed incrementally to Git across logical commits and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- "Checkout" buttons (mini cart and `/cart` page) are intentionally non-functional — real checkout is Phase 9 scope, not a defect.
+
+**Next Phase:** Phase 9 — Checkout & Orders. Not started.
 
 ---
 
