@@ -5,6 +5,8 @@ import Container from "../Container";
 import MegaMenu from "./MegaMenu";
 import MobileNav from "./MobileNav";
 import SearchBar from "../../features/product/SearchBar";
+import MiniCart from "../../features/cart/MiniCart";
+import { useCart } from "../../features/cart/useCart";
 import navigationCategories from "./navigationData";
 import { useLogoutUserMutation } from "../../features/auth/authApi";
 
@@ -13,9 +15,11 @@ function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const { user, accessToken } = useSelector((state) => state.auth);
   const [logoutUser] = useLogoutUserMutation();
+  const { itemCount } = useCart();
 
   const handleLogout = async () => {
     await logoutUser();
@@ -33,12 +37,7 @@ function Header() {
             aria-label="Open menu"
           >
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <path
-                d="M3 6H19M3 11H19M3 16H19"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-              />
+              <path d="M3 6H19M3 11H19M3 16H19" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
 
@@ -47,10 +46,7 @@ function Header() {
           </Link>
         </div>
 
-        <nav
-          className="hidden lg:flex items-center gap-8"
-          onMouseLeave={() => setActiveCategory(null)}
-        >
+        <nav className="hidden lg:flex items-center gap-8" onMouseLeave={() => setActiveCategory(null)}>
           {navigationCategories.map((category) => (
             <div
               key={category.slug}
@@ -61,20 +57,14 @@ function Header() {
                 type="button"
                 className="text-sm font-medium text-black hover:text-accent transition-colors"
                 onClick={() =>
-                  setActiveCategory((prev) =>
-                    prev === category.slug ? null : category.slug,
-                  )
+                  setActiveCategory((prev) => (prev === category.slug ? null : category.slug))
                 }
               >
                 {category.name}
               </button>
-              {activeCategory === category.slug &&
-                category.subcategories.length > 0 && (
-                  <MegaMenu
-                    categoryName={category.name}
-                    subcategories={category.subcategories}
-                  />
-                )}
+              {activeCategory === category.slug && category.subcategories.length > 0 && (
+                <MegaMenu categoryName={category.name} subcategories={category.subcategories} />
+              )}
             </div>
           ))}
         </nav>
@@ -87,19 +77,8 @@ function Header() {
               onClick={() => setSearchOpen((prev) => !prev)}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle
-                  cx="8.5"
-                  cy="8.5"
-                  r="5.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
-                <path
-                  d="M17 17L13 13"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                />
+                <circle cx="8.5" cy="8.5" r="5.5" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M17 17L13 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </button>
             {searchOpen && <SearchBar onClose={() => setSearchOpen(false)} />}
@@ -112,13 +91,7 @@ function Header() {
               onClick={() => setAccountMenuOpen((prev) => !prev)}
             >
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                <circle
-                  cx="10"
-                  cy="6.5"
-                  r="3.5"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                />
+                <circle cx="10" cy="6.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
                 <path
                   d="M3 17c1.5-3.5 4.5-5 7-5s5.5 1.5 7 5"
                   stroke="currentColor"
@@ -138,6 +111,13 @@ function Header() {
                       onClick={() => setAccountMenuOpen(false)}
                     >
                       My Profile
+                    </Link>
+                    <Link
+                      to="/wishlist"
+                      className="text-sm text-neutral-500 hover:text-black"
+                      onClick={() => setAccountMenuOpen(false)}
+                    >
+                      My Wishlist
                     </Link>
                     <button
                       type="button"
@@ -169,7 +149,12 @@ function Header() {
             )}
           </div>
 
-          <button type="button" aria-label="Cart">
+          <button
+            type="button"
+            aria-label="Cart"
+            className="relative"
+            onClick={() => setCartOpen(true)}
+          >
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path
                 d="M5 7h10l-1 10H6L5 7Z"
@@ -177,21 +162,19 @@ function Header() {
                 strokeWidth="1.5"
                 strokeLinejoin="round"
               />
-              <path
-                d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7"
-                stroke="currentColor"
-                strokeWidth="1.5"
-              />
+              <path d="M7.5 7V5.5a2.5 2.5 0 0 1 5 0V7" stroke="currentColor" strokeWidth="1.5" />
             </svg>
+            {itemCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-accent text-white text-[10px] rounded-full w-4 h-4 flex items-center justify-center">
+                {itemCount}
+              </span>
+            )}
           </button>
         </div>
       </Container>
 
-      <MobileNav
-        open={mobileOpen}
-        onClose={() => setMobileOpen(false)}
-        categories={navigationCategories}
-      />
+      <MobileNav open={mobileOpen} onClose={() => setMobileOpen(false)} categories={navigationCategories} />
+      <MiniCart open={cartOpen} onClose={() => setCartOpen(false)} />
     </header>
   );
 }
