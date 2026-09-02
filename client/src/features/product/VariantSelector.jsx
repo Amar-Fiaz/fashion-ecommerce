@@ -1,27 +1,37 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Button from "../../components/Button";
+import { useCart } from "../cart/useCart";
 
-// Size/color variant selection against the embedded variants array.
-// Sizes and colors are derived from the actual variant data, not a
-// fixed list, so this works correctly for any product's variant set.
-function VariantSelector({ variants, selectedSize, selectedColor, onSelect }) {
-  const sizes = useMemo(
-    () => [...new Set(variants.map((v) => v.size))],
-    [variants]
-  );
-  const colors = useMemo(
-    () => [...new Set(variants.map((v) => v.color))],
-    [variants]
-  );
+function VariantSelector({ product, variants, selectedSize, selectedColor, onSelect }) {
+  const { addItem } = useCart();
+  const [adding, setAdding] = useState(false);
+  const [added, setAdded] = useState(false);
+  const [error, setError] = useState(null);
+
+  const sizes = useMemo(() => [...new Set(variants.map((v) => v.size))], [variants]);
+  const colors = useMemo(() => [...new Set(variants.map((v) => v.color))], [variants]);
 
   const selectedVariant = variants.find(
     (v) => v.size === selectedSize && v.color === selectedColor
   );
 
-  const hasStockForSize = (size) =>
-    variants.some((v) => v.size === size && v.stock > 0);
-  const hasStockForColor = (color) =>
-    variants.some((v) => v.color === color && v.stock > 0);
+  const hasStockForSize = (size) => variants.some((v) => v.size === size && v.stock > 0);
+  const hasStockForColor = (color) => variants.some((v) => v.color === color && v.stock > 0);
+
+  const handleAddToCart = async () => {
+    if (!selectedVariant) return;
+    setAdding(true);
+    setError(null);
+    setAdded(false);
+    try {
+      await addItem({ product, variant: selectedVariant, quantity: 1 });
+      setAdded(true);
+    } catch (err) {
+      setError(err?.data?.message || "Could not add to cart. Please try again.");
+    } finally {
+      setAdding(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -35,7 +45,10 @@ function VariantSelector({ variants, selectedSize, selectedColor, onSelect }) {
                 key={size}
                 type="button"
                 disabled={disabled}
-                onClick={() => onSelect({ size, color: selectedColor })}
+                onClick={() => {
+                  onSelect({ size, color: selectedColor });
+                  setAdded(false);
+                }}
                 className={`px-3 py-2 text-sm rounded-sm border transition-colors ${
                   selectedSize === size
                     ? "border-black bg-black text-white"
@@ -59,7 +72,10 @@ function VariantSelector({ variants, selectedSize, selectedColor, onSelect }) {
                 key={color}
                 type="button"
                 disabled={disabled}
-                onClick={() => onSelect({ size: selectedSize, color })}
+                onClick={() => {
+                  onSelect({ size: selectedSize, color });
+                  setAdded(false);
+                }}
                 className={`px-3 py-2 text-sm rounded-sm border transition-colors ${
                   selectedColor === color
                     ? "border-black bg-black text-white"
@@ -78,9 +94,7 @@ function VariantSelector({ variants, selectedSize, selectedColor, onSelect }) {
           <>
             {selectedVariant ? (
               selectedVariant.stock > 0 ? (
-                <p className="text-success">
-                  In stock ({selectedVariant.stock} available)
-                </p>
+                <p className="text-success">In stock ({selectedVariant.stock} available)</p>
               ) : (
                 <p className="text-error">Out of stock in this combination</p>
               )
@@ -93,13 +107,14 @@ function VariantSelector({ variants, selectedSize, selectedColor, onSelect }) {
 
       <Button
         variant="primary"
-        disabled={!selectedVariant || selectedVariant.stock === 0}
+        disabled={!selectedVariant || selectedVariant.stock === 0 || adding}
+        onClick={handleAddToCart}
         className="w-full sm:w-auto"
       >
-        Add to Cart
+        {adding ? "Adding..." : "Add to Cart"}
       </Button>
-      {/* Add to Cart is intentionally non-functional in Phase 6 -
-          real cart logic is Phase 8 scope. */}
+      {added && <p className="text-sm text-success">Added to cart.</p>}
+      {error && <p className="text-sm text-error">{error}</p>}
     </div>
   );
 }
