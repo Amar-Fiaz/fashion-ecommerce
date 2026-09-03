@@ -1,10 +1,5 @@
 const { verifyAccessToken } = require("../utils/jwt");
 
-// Protects a route by requiring a valid access token in the
-// Authorization header ("Bearer <token>"). Attaches the decoded
-// payload (id, role) to req.user for downstream use. Not yet applied
-// to any route in this step - profile/address endpoints (a later
-// Phase 7 step) will use this.
 function protect(req, res, next) {
   const authHeader = req.headers.authorization;
 
@@ -27,8 +22,27 @@ function protect(req, res, next) {
   }
 }
 
-// Role-based authorization, layered on top of `protect`. Usage:
-// router.get('/admin-only', protect, authorize('admin'), handler)
+// Like protect, but never rejects the request - attaches req.user if
+// a valid token is present, otherwise leaves it undefined and
+// continues. Used by routes that must work for both guests and
+// authenticated users (e.g. checkout), where auth state changes
+// behavior but is never required.
+function optionalProtect(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    const token = authHeader.split(" ")[1];
+    try {
+      req.user = verifyAccessToken(token);
+    } catch {
+      // Invalid/expired token on an optional route - proceed as a
+      // guest rather than rejecting the request.
+    }
+  }
+
+  next();
+}
+
 function authorize(...allowedRoles) {
   return (req, res, next) => {
     if (!req.user || !allowedRoles.includes(req.user.role)) {
@@ -40,4 +54,4 @@ function authorize(...allowedRoles) {
   };
 }
 
-module.exports = { protect, authorize };
+module.exports = { protect, optionalProtect, authorize };
