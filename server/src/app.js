@@ -10,6 +10,7 @@ const adminAuthRoutes = require("./routes/adminAuth.routes");
 const userRoutes = require("./routes/user.routes");
 const cartRoutes = require("./routes/cart.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
+const orderRoutes = require("./routes/order.routes");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
 
@@ -33,6 +34,7 @@ app.use("/api/admin/auth", adminAuthRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
+app.use("/api/orders", orderRoutes);
 
 app.use(notFound);
 app.use(errorHandler);
