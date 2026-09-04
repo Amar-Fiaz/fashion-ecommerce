@@ -12,7 +12,11 @@ function MiniCart({ open, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/40 z-30" onClick={onClose} aria-hidden="true" />
+      <div
+        className="fixed inset-0 bg-black/40 z-30"
+        onClick={onClose}
+        aria-hidden="true"
+      />
       <div className="fixed top-0 right-0 h-full w-80 max-w-[90vw] bg-white z-40 shadow-lg flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-neutral-200">
           <span className="text-lg font-semibold text-black">Your Cart</span>
@@ -36,9 +40,15 @@ function MiniCart({ open, onClose }) {
             <div key={item.id} className="flex gap-3">
               <div className="w-16 h-16 bg-neutral-50 border border-neutral-200 rounded-sm flex items-center justify-center shrink-0">
                 {item.image ? (
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                  <img
+                    src={item.image}
+                    alt={item.name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  <span className="text-[10px] text-neutral-500 text-center px-1">No image</span>
+                  <span className="text-[10px] text-neutral-500 text-center px-1">
+                    No image
+                  </span>
                 )}
               </div>
               <div className="flex-1 flex flex-col gap-0.5">
@@ -46,7 +56,9 @@ function MiniCart({ open, onClose }) {
                 <p className="text-xs text-neutral-500">
                   {item.size} / {item.color} × {item.quantity}
                 </p>
-                <p className="text-sm font-medium text-black">${item.lineTotal}</p>
+                <p className="text-sm font-medium text-black">
+                  ${item.lineTotal}
+                </p>
                 {item.insufficientStock && (
                   <p className="text-xs text-error">Limited stock available</p>
                 )}
@@ -73,9 +85,11 @@ function MiniCart({ open, onClose }) {
                 View Cart
               </Button>
             </Link>
-            <Button variant="primary" className="w-full" disabled>
-              Checkout
-            </Button>
+            <Link to="/checkout" onClick={onClose}>
+              <Button variant="primary" className="w-full">
+                Checkout
+              </Button>
+            </Link>
             {/* Checkout is intentionally non-functional - Phase 9 scope. */}
           </div>
         )}
