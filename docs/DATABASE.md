@@ -50,8 +50,7 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | SubCategory | Created | Phase 5 | References parent Category by ObjectId |
 | Cart | Created | Phase 8 | See Cart Duality above; embedded items, no stored price (computed live) |
 | Wishlist | Created | Phase 8 | Product-level only, no variant tracking |
-| Address | Not Created | Phase 9 | |
-| Order | Not Created | Phase 9 | Snapshotted product data — see above |
+| Order | Created | Phase 9 | Embedded, snapshotted items and shipping address — see below |
 | Payment | Not Created | Phase 10 | Provider-agnostic fields; gateway TBD |
 | Review | Not Created | Phase 11 | |
 | Coupon | Not Created | Phase 11 | |
@@ -169,6 +168,43 @@ No price is stored on cart items — prices are computed live from the reference
 | `createdAt` / `updatedAt` | Date | Automatic timestamps |
 
 ---
+
+### Order
+
+| Field | Type | Notes |
+|---|---|---|
+| `orderNumber` | String | Required, unique, indexed — human-readable identifier (e.g. `ORD-20260904-1234`), distinct from `_id` |
+| `user` | ObjectId (ref: User) | Nullable — `null` for guest orders |
+| `email` | String | Required — always present, even for guest orders |
+| `items` | [EmbeddedOrderItem] | Embedded, snapshotted array — see below |
+| `shippingAddress` | EmbeddedAddress | Embedded, snapshotted — see below. Never a reference to `User.addresses` |
+| `subtotal` / `shippingCost` / `total` | Number | Required — computed and verified server-side at order creation, never trusted from the client |
+| `status` | String | Enum: `pending` \| `processing` \| `shipped` \| `delivered` \| `cancelled`; default `pending` |
+| `paymentStatus` | String | Enum: `unpaid` \| `paid`; default `unpaid` — not meaningfully exercised until Phase 10 |
+| `paymentMethod` | String | Default `"cod"` — placeholder only; real gateway selection is Phase 10 |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+**Embedded order item sub-schema** (`items` array — snapshotted per `ARCHITECTURE.md`'s order-snapshotting rule; never references live `Product` data for these fields):
+
+| Field | Type | Notes |
+|---|---|---|
+| `product` | ObjectId (ref: Product) | Reference kept for lookup convenience; display fields below are the actual snapshot |
+| `name` / `slug` / `image` | String | Snapshotted from the product at time of purchase |
+| `variantSku` / `size` / `color` | String | Snapshotted from the selected variant |
+| `unitPrice` | Number | Snapshotted price at time of purchase (sale price if applicable) |
+| `quantity` | Number | Required, min 1 |
+| `lineTotal` | Number | `unitPrice × quantity`, computed server-side |
+
+**Embedded shipping address sub-schema** (`shippingAddress` — snapshotted, same shape as `User.addresses`' fields minus `label`/`isDefault`, which are irrelevant once captured on an order):
+
+| Field | Type | Notes |
+|---|---|---|
+| `fullName` / `line1` / `city` / `postalCode` / `country` | String | Required |
+| `line2` / `state` / `phone` | String | Optional |
+
+**Shipping cost rule** (implemented in `order.service.js`, not stored as configuration): flat $8 shipping; free when subtotal is strictly greater than $75.
+
+**Known limitation:** stock validation and deduction at order creation are sequential, not wrapped in a formal database transaction — under simultaneous orders racing for the last unit of stock, a narrow race condition is theoretically possible. Acceptable for current scope; revisitable if it becomes a practical issue at higher traffic.
 
 ## Status
 

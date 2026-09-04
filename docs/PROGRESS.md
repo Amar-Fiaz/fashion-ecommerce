@@ -24,7 +24,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 8 — Cart & Wishlist** — COMPLETE
 
-**Phase 9 — Checkout & Orders** — Not Started
+**Phase 9 — Checkout & Orders** — COMPLETE
+
+**Phase 10 — Payments** — Not Started
 
 ---
 
@@ -537,6 +539,70 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 9 — Checkout & Orders. Not started.
 
+
+---
+
+### Phase 9 — Checkout & Orders
+
+**Status:** COMPLETE
+
+**Completed:**
+- `Order` model created with embedded, snapshotted line items and shipping address, per `ARCHITECTURE.md`'s order-snapshotting rule — orders never reference live `Product` or `User.addresses` data. No standalone `Address` collection was created (approved Phase 9 decision); addresses are drawn from `User.addresses` or entered inline, and always snapshotted onto the order.
+- `optionalProtect` middleware added, allowing checkout to work identically for guests and authenticated users without requiring login.
+- Order service fully re-validates and re-prices every item against live `Product` data at order creation — client-supplied prices/totals are never trusted, only used to know which products/variants/quantities were requested, directly implementing `CLAUDE.md` Section 15.
+- Shipping cost rule implemented: flat $8, free when subtotal > $75 (matching the Phase 4 homepage promo banner's existing copy).
+- Stock is deducted immediately at order creation (approved decision), with a final live stock check before any deduction occurs; insufficient stock cleanly rejects the whole order with no partial effect.
+- Order status workflow implemented: `pending → processing → shipped → delivered`, plus `cancelled`; `paymentStatus: unpaid | paid` present on the schema, not yet meaningfully exercised until Phase 10.
+- Human-readable `orderNumber` generated at creation, distinct from the internal `_id`.
+- Order creation clears the authenticated user's persisted cart; the guest cart is cleared client-side after a successful order.
+- Backend order history and order detail endpoints (authenticated only), with correct per-user authorization (an order not belonging to the requester returns 404, not 403, to avoid confirming its existence).
+- Frontend: checkout page (saved-address selection or inline `AddressForm` reuse from Phase 7, live order summary preview using the same shipping rule as the backend for display purposes only), order confirmation page (works via router state immediately after checkout for both guest and authenticated users; re-fetches via API on reload for authenticated users only — guests correctly see a clear explanatory message on reload, per the approved no-persistent-guest-history scope), order history page, and order detail page with a visual status tracker.
+- "Checkout" buttons in the mini cart and full cart page, previously disabled placeholders since Phase 8, now enabled and wired to the real checkout flow.
+
+**Decisions resolved during this phase:**
+- No standalone `Address` model — addresses are snapshotted directly onto `Order`; `DATABASE.md`'s previously-planned `Address` model entry removed accordingly.
+- Shipping: flat $8, free when subtotal is strictly greater than $75.
+- Stock deducted at order creation (not deferred to payment confirmation), sequential validation-then-deduction, with the concurrency limitation explicitly documented.
+- Order status enum: `pending/processing/shipped/delivered/cancelled` plus a separate `paymentStatus` field.
+- Human-readable `orderNumber` added alongside the internal `_id`.
+- No persistent guest order history — guests see their confirmation immediately after checkout only; authenticated users get full order history and detail/tracking.
+
+**Files Created:**
+- `server/src/models/Order.js`
+- `server/src/validators/order.validators.js`
+- `server/src/services/order.service.js`
+- `server/src/controllers/order.controller.js`
+- `server/src/routes/order.routes.js`
+- `client/src/features/order/orderApi.js`, `orderTotals.js`
+- `client/src/pages/CheckoutPage.jsx`, `OrderConfirmationPage.jsx`, `OrderHistoryPage.jsx`, `OrderDetailPage.jsx`
+
+**Files Modified:**
+- `server/src/middlewares/auth.js` (`optionalProtect` added)
+- `server/src/app.js` (order routes wired in)
+- `client/src/api/apiSlice.js` (`Orders` cache tag)
+- `client/src/routes/AppRoutes.jsx` (checkout/order routes)
+- `client/src/features/cart/MiniCart.jsx`, `client/src/pages/CartPage.jsx` (checkout buttons enabled)
+- `client/src/components/navigation/Header.jsx` (order history link)
+- `docs/DATABASE.md` (Order model added; Address model entry removed per approved decision)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- Full backend order API tested via Postman: guest checkout, stock deduction confirmed in Atlas, insufficient-stock rejection, authenticated checkout with a saved address, cart-clearing after order, order history, order detail with correct per-user authorization, and input validation — 8 test cases, all passing.
+- Full guest checkout flow tested in-browser, including confirming the confirmation page correctly becomes unavailable on a genuinely fresh page load (no persistent guest history, as designed) after initially appearing to persist through what turned out to be a soft/cached refresh rather than a true reload — verified definitively via a brand-new browser tab.
+- Full authenticated checkout flow tested in-browser: saved-address selection, order placement, confirmation persistence across reload (via API), order history, and order detail.
+- Order status tracker verified at multiple states by directly editing order documents in Atlas: `pending`→`shipped` correctly shows steps 1–3 filled with step 4 unfilled; `cancelled` correctly shows a plain cancellation message instead of the tracker.
+- Multi-item orders verified: correct per-item totals, correct summed subtotal, correct stock deduction across multiple products.
+- Full regression pass confirmed Phases 1–8 unaffected.
+- All required breakpoints checked on checkout, confirmation, order history, and order detail pages.
+- Browser console and backend terminal checked throughout — no unexplained errors (known browser-extension noise and expected token-expiry 401s excluded).
+- All work committed incrementally to Git across logical commits and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- Stock validation/deduction is not wrapped in a formal database transaction — a narrow race condition is theoretically possible under simultaneous orders for the last unit of stock. Documented in `DATABASE.md`; acceptable for current scope.
+- No real payment gateway yet — all orders are effectively Cash on Delivery; `paymentStatus` exists on the schema but isn't meaningfully exercised until Phase 10.
+
+**Next Phase:** Phase 10 — Payments. Not started.
+
 ---
 
 ## Phase History Template
@@ -563,4 +629,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 7 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, and product detail experience are all in place, and full authentication is now live — customer registration/login/logout with enforced email verification, forgot/reset password, structurally separate admin authentication, in-memory access tokens with automatic silent refresh, and customer profile/address management. Phase 8 — Cart & Wishlist has not started. This file will be updated again when Phase 8 begins.
+Phase 0 through Phase 9 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, product detail experience, authentication, cart/wishlist, and now checkout and orders are all in place — guest and authenticated checkout both work end-to-end with fully backend-verified pricing, stock, and shipping, order confirmation, order history, and order status tracking. Phase 10 — Payments has not started. This file will be updated again when Phase 10 begins.
