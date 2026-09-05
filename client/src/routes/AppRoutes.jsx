@@ -13,6 +13,7 @@ import ProfilePage from "../pages/ProfilePage";
 import CartPage from "../pages/CartPage";
 import WishlistPage from "../pages/WishlistPage";
 import CheckoutPage from "../pages/CheckoutPage";
+import MockGatewayPage from "../pages/MockGatewayPage";
 import OrderConfirmationPage from "../pages/OrderConfirmationPage";
 import OrderHistoryPage from "../pages/OrderHistoryPage";
 import OrderDetailPage from "../pages/OrderDetailPage";
@@ -33,6 +34,7 @@ function AppRoutes() {
         <Route path="/verify-email/:token" element={<VerifyEmailPage />} />
         <Route path="/cart" element={<CartPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
+        <Route path="/mock-gateway/:paymentId" element={<MockGatewayPage />} />
         <Route path="/order-confirmation/:id" element={<OrderConfirmationPage />} />
 
         <Route element={<ProtectedRoute />}>
