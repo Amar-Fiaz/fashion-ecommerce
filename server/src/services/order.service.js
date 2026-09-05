@@ -2,9 +2,10 @@ const Order = require("../models/Order");
 const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const User = require("../models/User");
+const { initiatePayment } = require("./paymentService");
 
 const FLAT_SHIPPING_COST = 8;
-const FREE_SHIPPING_THRESHOLD = 75; // subtotal > 75 qualifies, per approved decision
+const FREE_SHIPPING_THRESHOLD = 75;
 
 function generateOrderNumber() {
   const datePart = new Date().toISOString().slice(0, 10).replace(/-/g, "");
@@ -12,11 +13,6 @@ function generateOrderNumber() {
   return `ORD-${datePart}-${randomPart}`;
 }
 
-// Resolves the shipping address for this order: either a saved
-// address (authenticated users, by addressId) or an inline address
-// (guests, or an authenticated user entering a new one). Either way,
-// the result is a plain object snapshotted onto the order - never a
-// reference to User.addresses, per the approved Phase 9 decision.
 async function resolveShippingAddress({ userId, addressId, inlineAddress }) {
   if (addressId) {
     if (!userId) {
@@ -51,10 +47,6 @@ async function resolveShippingAddress({ userId, addressId, inlineAddress }) {
   return inlineAddress;
 }
 
-// Re-validates and re-prices every item against live Product data.
-// This is the actual enforcement of CLAUDE.md Section 15 - client-
-// supplied prices/quantities are never trusted, only used to know
-// *which* products/variants/quantities were requested.
 async function validateAndPriceItems(requestedItems) {
   const pricedItems = [];
 
@@ -94,7 +86,6 @@ async function validateAndPriceItems(requestedItems) {
       unitPrice,
       quantity: requested.quantity,
       lineTotal: unitPrice * requested.quantity,
-      // kept only for the deduction step below, stripped before saving
       _productDoc: product,
       _variantRef: variant,
     });
@@ -110,7 +101,7 @@ function calculateTotals(pricedItems) {
   return { subtotal, shippingCost, total };
 }
 
-async function createOrder({ userId, email, items, addressId, shippingAddress }) {
+async function createOrder({ userId, email, items, addressId, shippingAddress, paymentMethod }) {
   const pricedItems = await validateAndPriceItems(items);
   const { subtotal, shippingCost, total } = calculateTotals(pricedItems);
   const resolvedAddress = await resolveShippingAddress({
@@ -119,20 +110,12 @@ async function createOrder({ userId, email, items, addressId, shippingAddress })
     inlineAddress: shippingAddress,
   });
 
-  // Deduct stock now (Phase 9 decision: deduct at order creation, not
-  // deferred to payment confirmation - there is no payment gateway
-  // yet, so order placement is the only real commitment point).
-  // Sequential, not wrapped in a formal DB transaction - see this
-  // step's introduction for the known limitation under concurrent
-  // race conditions.
   for (const item of pricedItems) {
     item._variantRef.stock -= item.quantity;
     await item._productDoc.save();
   }
 
-  const orderItems = pricedItems.map(
-    ({ _productDoc, _variantRef, ...cleanItem }) => cleanItem
-  );
+  const orderItems = pricedItems.map(({ _productDoc, _variantRef, ...cleanItem }) => cleanItem);
 
   const order = await Order.create({
     orderNumber: generateOrderNumber(),
@@ -143,15 +126,21 @@ async function createOrder({ userId, email, items, addressId, shippingAddress })
     subtotal,
     shippingCost,
     total,
+    paymentMethod,
   });
 
-  // Clear the authenticated user's persisted cart after a successful
-  // order - the guest cart (localStorage) is cleared by the frontend.
   if (userId) {
     await Cart.findOneAndUpdate({ user: userId }, { items: [] });
   }
 
-  return order;
+  // Payment is initiated immediately after order creation - the
+  // order exists (and stock is already deducted) regardless of
+  // payment outcome, matching the approved Phase 9 stock-deduction
+  // timing decision. Payment success/failure only ever affects
+  // paymentStatus, never whether the order itself exists.
+  const paymentInit = await initiatePayment(paymentMethod, order);
+
+  return { order, paymentInit };
 }
 
 async function getOrderById(orderId, userId) {
@@ -162,10 +151,6 @@ async function getOrderById(orderId, userId) {
     throw error;
   }
 
-  // Authorization: an authenticated user may only view their own
-  // orders. (Guest orders have no persistent lookup at all, per the
-  // approved scope - this function is only reached via the
-  // authenticated order-history/detail routes.)
   if (!order.user || order.user.toString() !== userId) {
     const error = new Error("Order not found");
     error.statusCode = 404;

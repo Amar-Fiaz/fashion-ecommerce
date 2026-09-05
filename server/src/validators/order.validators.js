@@ -19,15 +19,12 @@ const shippingAddressInputSchema = z.object({
   phone: z.string().trim().optional(),
 });
 
-// A saved address (authenticated users may pass addressId instead of
-// a full inline address) OR an inline address is required - not both
-// missing. Validated in the service layer (needs the user's saved
-// addresses to check addressId), not here.
 const createOrderSchema = z.object({
   email: z.string().trim().email("Enter a valid email address"),
   items: z.array(orderItemInputSchema).min(1, "Cart is empty"),
   addressId: z.string().optional(),
   shippingAddress: shippingAddressInputSchema.optional(),
+  paymentMethod: z.enum(["cod", "bank_transfer", "mock_gateway"]),
 });
 
 module.exports = { createOrderSchema };

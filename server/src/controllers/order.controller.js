@@ -3,14 +3,15 @@ const orderService = require("../services/order.service");
 async function createOrder(req, res, next) {
   try {
     const userId = req.user?.id || null;
-    const order = await orderService.createOrder({
+    const { order, paymentInit } = await orderService.createOrder({
       userId,
       email: req.body.email,
       items: req.body.items,
       addressId: req.body.addressId,
       shippingAddress: req.body.shippingAddress,
+      paymentMethod: req.body.paymentMethod,
     });
-    res.status(201).json({ success: true, order });
+    res.status(201).json({ success: true, order, payment: paymentInit });
   } catch (error) {
     next(error);
   }
