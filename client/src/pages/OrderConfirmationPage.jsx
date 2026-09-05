@@ -3,16 +3,13 @@ import { useSelector } from "react-redux";
 import Container from "../components/Container";
 import { useGetOrderByIdQuery } from "../features/order/orderApi";
 
-// Works two ways: immediately after checkout, the order is passed
-// via router state (avoiding an extra fetch, and working for guests
-// who have no way to re-fetch this order later). If visited directly
-// (e.g. a bookmarked/refreshed link) by an authenticated user whose
-// order this is, it re-fetches via the API instead.
 function OrderConfirmationPage() {
   const { id } = useParams();
   const location = useLocation();
   const { accessToken } = useSelector((state) => state.auth);
   const orderFromState = location.state?.order;
+  const paymentFromState = location.state?.payment;
+  const paymentOutcome = location.state?.paymentOutcome;
 
   const { data, isLoading, error } = useGetOrderByIdQuery(id, {
     skip: Boolean(orderFromState) || !accessToken,
@@ -44,14 +41,46 @@ function OrderConfirmationPage() {
     );
   }
 
+  const isBankTransfer = order.paymentMethod === "bank_transfer";
+  const mockPaymentFailed = paymentOutcome === "failure";
+
   return (
     <Container className="py-12 max-w-xl mx-auto flex flex-col gap-6 text-center">
       <div>
-        <h1 className="text-2xl font-bold text-black">Thank you for your order</h1>
+        <h1 className="text-2xl font-bold text-black">
+          {mockPaymentFailed ? "Order placed - payment not completed" : "Thank you for your order"}
+        </h1>
         <p className="text-sm text-neutral-500 mt-1">
           Order <span className="font-medium text-black">{order.orderNumber}</span>
         </p>
       </div>
+
+      {mockPaymentFailed && (
+        <p className="text-sm text-error border border-error rounded-md p-3">
+          Your simulated payment was not successful. Your order has been recorded,
+          but payment is still marked unpaid.
+        </p>
+      )}
+
+      {isBankTransfer && paymentFromState?.bankDetails && (
+        <div className="border border-accent rounded-md p-4 text-left flex flex-col gap-1">
+          <p className="text-sm font-semibold text-black mb-1">
+            Bank Transfer Instructions
+          </p>
+          <p className="text-sm text-neutral-800">
+            Account Title: {paymentFromState.bankDetails.accountTitle}
+          </p>
+          <p className="text-sm text-neutral-800">
+            Account Number: {paymentFromState.bankDetails.accountNumber}
+          </p>
+          <p className="text-sm text-neutral-800">Bank: {paymentFromState.bankDetails.bankName}</p>
+          <p className="text-sm text-neutral-800">IBAN: {paymentFromState.bankDetails.iban}</p>
+          <p className="text-xs text-neutral-500 mt-2">
+            Please transfer the total amount and reference your order number.
+            Your order will be processed once payment is confirmed.
+          </p>
+        </div>
+      )}
 
       <div className="border border-neutral-200 rounded-md p-4 text-left flex flex-col gap-3">
         <div>
@@ -93,7 +122,9 @@ function OrderConfirmationPage() {
 
         <div className="border-t border-neutral-200 pt-3 flex justify-between text-sm">
           <span className="text-neutral-500">Payment method</span>
-          <span className="text-black">Cash on Delivery</span>
+          <span className="text-black capitalize">
+            {order.paymentMethod.replace("_", " ")}
+          </span>
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-neutral-500">Status</span>
