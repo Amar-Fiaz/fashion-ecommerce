@@ -5,6 +5,7 @@ import Container from "../components/Container";
 import Button from "../components/Button";
 import Input from "../components/Input";
 import AddressForm from "../features/user/AddressForm";
+import PaymentMethodSelector from "../features/payment/PaymentMethodSelector";
 import { useCart } from "../features/cart/useCart";
 import { useGetAddressesQuery } from "../features/user/userApi";
 import { useCreateOrderMutation } from "../features/order/orderApi";
@@ -24,6 +25,7 @@ function CheckoutPage() {
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [useNewAddress, setUseNewAddress] = useState(savedAddresses.length === 0);
   const [newAddress, setNewAddress] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState("cod");
   const [error, setError] = useState(null);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
 
@@ -53,6 +55,7 @@ function CheckoutPage() {
         quantity: item.quantity,
       })),
       ...(useNewAddress ? { shippingAddress: newAddress } : { addressId: selectedAddressId }),
+      paymentMethod,
     };
 
     try {
@@ -60,9 +63,20 @@ function CheckoutPage() {
       if (!isAuthenticated) {
         dispatch(clearGuestItems());
       }
-      navigate(`/order-confirmation/${result.order._id}`, {
-        state: { order: result.order },
-      });
+
+      if (result.payment.redirectRequired) {
+        // Mock gateway flow - navigate to the simulated hosted
+        // checkout page, matching how a real gateway redirect works.
+        // The order id is carried along so the mock gateway page can
+        // send the customer to the real confirmation page afterward.
+        navigate(result.payment.redirectUrl, {
+          state: { orderId: result.order._id },
+        });
+      } else {
+        navigate(`/order-confirmation/${result.order._id}`, {
+          state: { order: result.order, payment: result.payment },
+        });
+      }
     } catch (err) {
       setError(err?.data?.message || "Could not place your order. Please try again.");
     }
@@ -152,6 +166,11 @@ function CheckoutPage() {
             )}
           </section>
 
+          <section>
+            <h2 className="text-lg font-semibold text-black mb-3">Payment method</h2>
+            <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+          </section>
+
           {error && <p className="text-sm text-error">{error}</p>}
         </div>
 
@@ -183,7 +202,7 @@ function CheckoutPage() {
             Final total is verified by the server when your order is placed.
           </p>
           <Button variant="primary" className="w-full" disabled={isLoading} onClick={handlePlaceOrder}>
-            {isLoading ? "Placing order..." : "Place Order (Cash on Delivery)"}
+            {isLoading ? "Placing order..." : "Place Order"}
           </Button>
         </div>
       </div>
