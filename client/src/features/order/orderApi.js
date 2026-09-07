@@ -4,7 +4,7 @@ export const orderApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     createOrder: builder.mutation({
       query: (body) => ({ url: "/orders", method: "POST", body }),
-      invalidatesTags: ["Cart"],
+      invalidatesTags: ["Cart", "Orders"],
     }),
     getMyOrders: builder.query({
       query: () => "/orders",
@@ -17,4 +17,8 @@ export const orderApi = apiSlice.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useCreateOrderMutation, useGetMyOrdersQuery, useGetOrderByIdQuery } = orderApi;
+export const {
+  useCreateOrderMutation,
+  useGetMyOrdersQuery,
+  useGetOrderByIdQuery,
+} = orderApi;
