@@ -51,7 +51,7 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | Cart | Created | Phase 8 | See Cart Duality above; embedded items, no stored price (computed live) |
 | Wishlist | Created | Phase 8 | Product-level only, no variant tracking |
 | Order | Created | Phase 9 | Embedded, snapshotted items and shipping address — see below |
-| Payment | Not Created | Phase 10 | Provider-agnostic fields; gateway TBD |
+| Payment | Created | Phase 10 | One record per order's payment attempt; see below |
 | Review | Not Created | Phase 11 | |
 | Coupon | Not Created | Phase 11 | |
 | Notification | Not Created | Phase 11 | |
@@ -138,7 +138,7 @@ Indexes: text index on `(name, description, tags)` for search; compound index on
 | `phone` | String | Optional |
 | `isDefault` | Boolean | Only one address may be `true` at a time; enforced in `user.service.js` |
 
-**Note on Phase 9:** this embedded address book is for the customer's personal profile management (Phase 7 scope). How Phase 9's checkout flow relates to these (referencing them directly, copying a snapshot, or promoting to a standalone `Address` collection) is a decision for Phase 9, not decided here.
+**Note on Phase 9:** this embedded address book is for the customer's personal profile management (Phase 7 scope). Phase 9's checkout snapshots a chosen saved address (or an inline-entered one) directly onto the `Order` — see below — rather than referencing `User.addresses` live.
 
 ### Cart
 
@@ -157,7 +157,7 @@ Indexes: text index on `(name, description, tags)` for search; compound index on
 | `size` / `color` | String | Required — denormalized from the variant at add-time for convenience |
 | `quantity` | Number | Required, min 1 |
 
-No price is stored on cart items — prices are computed live from the referenced `Product` at read time, so the cart always reflects current pricing. Final, backend-verified order totals (including discounts/coupons/shipping) are Phase 9's responsibility, not this model's.
+No price is stored on cart items — prices are computed live from the referenced `Product` at read time, so the cart always reflects current pricing. Final, backend-verified order totals (including shipping) are `Order`'s responsibility, not this model's.
 
 ### Wishlist
 
@@ -166,8 +166,6 @@ No price is stored on cart items — prices are computed live from the reference
 | `user` | ObjectId (ref: User) | Required, unique — one wishlist per user |
 | `products` | [ObjectId] (ref: Product) | Product-level only — no size/color tracking, per the approved Phase 8 decision |
 | `createdAt` / `updatedAt` | Date | Automatic timestamps |
-
----
 
 ### Order
 
@@ -180,8 +178,8 @@ No price is stored on cart items — prices are computed live from the reference
 | `shippingAddress` | EmbeddedAddress | Embedded, snapshotted — see below. Never a reference to `User.addresses` |
 | `subtotal` / `shippingCost` / `total` | Number | Required — computed and verified server-side at order creation, never trusted from the client |
 | `status` | String | Enum: `pending` \| `processing` \| `shipped` \| `delivered` \| `cancelled`; default `pending` |
-| `paymentStatus` | String | Enum: `unpaid` \| `paid`; default `unpaid` — not meaningfully exercised until Phase 10 |
-| `paymentMethod` | String | Default `"cod"` — placeholder only; real gateway selection is Phase 10 |
+| `paymentStatus` | String | Enum: `unpaid` \| `paid`; default `unpaid` |
+| `paymentMethod` | String | Enum: `cod` \| `bank_transfer` \| `mock_gateway`; set at checkout |
 | `createdAt` / `updatedAt` | Date | Automatic timestamps |
 
 **Embedded order item sub-schema** (`items` array — snapshotted per `ARCHITECTURE.md`'s order-snapshotting rule; never references live `Product` data for these fields):
@@ -202,10 +200,29 @@ No price is stored on cart items — prices are computed live from the reference
 | `fullName` / `line1` / `city` / `postalCode` / `country` | String | Required |
 | `line2` / `state` / `phone` | String | Optional |
 
+**No standalone `Address` collection exists** — resolved in Phase 9. Addresses are drawn from `User.addresses` (authenticated users) or entered inline (guests, or a new address), and always snapshotted directly onto the order.
+
 **Shipping cost rule** (implemented in `order.service.js`, not stored as configuration): flat $8 shipping; free when subtotal is strictly greater than $75.
 
 **Known limitation:** stock validation and deduction at order creation are sequential, not wrapped in a formal database transaction — under simultaneous orders racing for the last unit of stock, a narrow race condition is theoretically possible. Acceptable for current scope; revisitable if it becomes a practical issue at higher traffic.
 
+### Payment
+
+| Field | Type | Notes |
+|---|---|---|
+| `order` | ObjectId (ref: Order) | Required |
+| `method` | String | Enum: `cod` \| `bank_transfer` \| `mock_gateway` |
+| `status` | String | Enum: `pending` \| `succeeded` \| `failed`; default `pending` |
+| `amount` | Number | Snapshotted from the order's total at initiation |
+| `gatewayReference` | String | Nullable — populated only for `mock_gateway` after verification; a stand-in for what a real gateway's transaction ID would be |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+Kept as a separate collection from `Order` (rather than embedded) since a payment attempt is conceptually distinct from what was ordered, and could in principle be retried independently of the order itself.
+
+**No real payment gateway is integrated** — resolved in Phase 10. Every current Pakistani gateway option requires merchant registration even for sandbox access, so `cod` and `bank_transfer` are fully real, and `mock_gateway` is a self-built simulation of a real hosted-checkout flow (redirect → signed callback → server-side HMAC signature verification), implemented behind the `paymentService` abstraction so a real gateway can be substituted later without changing the surrounding order/checkout flow. See `ARCHITECTURE.md` Section 7 for full detail.
+
+---
+
 ## Status
 
-Models created so far: `Category`, `SubCategory`, `Product` (Phase 5), `User` (Phase 7), `Cart` and `Wishlist` (Phase 8). Remaining planned models (`Address`, `Order`, `Payment`, `Review`, `Coupon`, `Notification`, `Banner`, `NewsletterSubscriber`) are not yet created and will be added to this file, with full field-level detail, only when the phase that requires them begins. This file is kept in sync with the actual contents of `/server/models` at all times — if they diverge, this file is wrong and must be corrected.
+Models created so far: `Category`, `SubCategory`, `Product` (Phase 5), `User` (Phase 7), `Cart` and `Wishlist` (Phase 8), `Order` and `Payment` (Phase 9–10). Remaining planned models (`Review`, `Coupon`, `Notification`, `Banner`, `NewsletterSubscriber`) are not yet created and will be added to this file, with full field-level detail, only when the phase that requires them begins. This file is kept in sync with the actual contents of `/server/models` at all times — if they diverge, this file is wrong and must be corrected.

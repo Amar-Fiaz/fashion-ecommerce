@@ -89,13 +89,14 @@ config/       → DB connection, Cloudinary, environment loading
 
 ## 7. Payment Architecture
 
-- **No payment gateway is selected yet.** This decision is explicitly deferred to Phase 10 (Payments) and must not block earlier phases.
-- The backend must isolate all payment logic behind a **`paymentService` abstraction**, exposing a consistent interface regardless of which provider(s) are eventually integrated, conceptually:
-  - initiate/create a payment
-  - verify a payment (server-side, against the provider — never trusting a frontend-supplied "success" status)
-  - handle asynchronous confirmation (webhook/callback)
-- Manual payment methods (Cash on Delivery, Bank Transfer) are modeled as order-status workflows (e.g., pending confirmation → confirmed by admin) and do not require a payment gateway integration.
-- No raw card data is ever stored or handled directly by this application's backend or frontend.
+- **Payment gateway decision resolved in Phase 10.** After researching current Pakistani payment gateway options (JazzCash, aggregators like Simpaisa), every real option requires a merchant registration/onboarding step even for sandbox access — there is no self-serve, instant test mode comparable to Stripe (which does not support Pakistan-registered merchants at all). Given this project's current stage, a real gateway registration was judged out of scope.
+- **Implemented instead:** Cash on Delivery and Bank Transfer (both fully real, no external dependency), plus a **self-built mock payment gateway** that simulates a real hosted-checkout redirect flow (redirect to a payment page → signed callback → server-side signature verification) without contacting any real third party. This satisfies `CLAUDE.md` Section 16's "sandbox first, no real credentials" requirement while still exercising the full architectural pattern a real gateway integration would need.
+- The `paymentService` abstraction (`server/src/services/paymentService.js`) dispatches to per-method modules (`payments/cod.js`, `payments/bankTransfer.js`, `payments/mockGateway.js`), each implementing:
+  - `initiate(order)` — returns what the frontend needs to proceed (nothing, for manual methods; a redirect URL, for the mock gateway)
+  - `verify(payload)` — server-side confirmation; for the mock gateway, this recomputes and checks an HMAC signature rather than trusting a client-supplied outcome directly, mirroring how a real gateway's callback verification works
+- **Swapping in a real gateway later** (e.g., once a JazzCash merchant account is registered) only requires replacing `mockGateway.js`'s internals with real API calls — the dispatcher, order-creation flow, and frontend checkout/confirmation pages do not need to change.
+- Manual payment methods (Cash on Delivery, Bank Transfer) are modeled as order-status workflows (`paymentStatus: unpaid` until admin confirmation, a Phase 12 capability) and require no gateway integration.
+- No raw card data is ever stored or handled directly by this application's backend or frontend — the mock gateway does not collect or simulate card details at all, only a success/failure outcome.
 
 ---
 

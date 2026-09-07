@@ -26,7 +26,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 9 — Checkout & Orders** — COMPLETE
 
-**Phase 10 — Payments** — Not Started
+**Phase 10 — Payments** — COMPLETE
+
+**Phase 11 — Notifications, Reviews & Coupons** — Not Started
 
 ---
 
@@ -36,8 +38,9 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 | Decision | Deferred to | Notes |
 |---|---|---|
-| Payment gateway selection | Phase 10 — Payments | See `ARCHITECTURE.md` Section 7 |
 | Hosting/deployment provider | Phase 15 — Deployment | See `ARCHITECTURE.md` Section 10 |
+
+**Resolved:** Payment gateway selection (Phase 10) — see `ARCHITECTURE.md` Section 7. No real gateway was integrated (every current Pakistani option requires merchant registration even for sandbox access); COD, Bank Transfer, and a self-built mock gateway were implemented instead, behind the `paymentService` abstraction so a real gateway can be swapped in later without redesigning checkout.
 
 ---
 
@@ -603,6 +606,72 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 10 — Payments. Not started.
 
+
+---
+
+### Phase 10 — Payments
+
+**Status:** COMPLETE
+
+**Completed:**
+- Researched current Pakistani payment gateway options (JazzCash, Simpaisa and similar aggregators) and confirmed Stripe does not support Pakistan-registered merchants. Found that every real local option requires merchant registration/onboarding even for sandbox access — no self-serve instant test mode exists. Based on this, resolved the long-deferred payment gateway decision (open since Phase 0) by implementing COD, Bank Transfer, and a self-built mock gateway instead of a real provider, documented in full in `ARCHITECTURE.md` Section 7.
+- `Payment` model created — one record per order's payment attempt, kept separate from `Order`.
+- `paymentService` abstraction built as a dispatcher over per-method modules (`cod.js`, `bankTransfer.js`, `mockGateway.js`), each implementing a consistent `initiate`/`verify` interface, fulfilling the abstraction `ARCHITECTURE.md` specified all the way back in Phase 0.
+- Mock gateway simulates a real hosted-checkout redirect flow: order creation returns a redirect URL, a simulated payment page lets the customer choose a simulated outcome, and the return trip is verified server-side via HMAC signature — a forged/tampered outcome is rejected, exactly as a real gateway's callback verification would work.
+- Bank Transfer displays static, informational bank account details at order confirmation; no proof-of-payment upload (approved scope).
+- Order creation now accepts and stores `paymentMethod`; payment initiation happens immediately after order creation, using the same stock-deduction timing already established in Phase 9.
+- Frontend: payment method selection added to `CheckoutPage`; a dedicated, clearly-labeled sandbox simulation page (`MockGatewayPage`); `OrderConfirmationPage` updated to show bank transfer instructions or a payment-outcome notice as appropriate.
+
+**Bugs found and fixed during this phase (via testing):**
+- `MockGatewayPage` crashed if the payment fetch failed or hadn't resolved by the time a button might be clicked — no `isError` handling and no guard before reading `data.signatures`. Fixed by adding proper error-state handling and a defensive check.
+- A commit in Step 2 (`feat: add simulated payment gateway page`) had an empty `git add` for `MockGatewayPage.jsx`, so Git never actually tracked the file despite the commit message — discovered during Step 4's pre-closeout check and corrected with a proper commit.
+- Order creation didn't invalidate the cached order list, so a newly-placed order didn't appear in "My Orders" without a manual hard refresh — fixed by adding the `Orders` cache tag to the `createOrder` mutation's invalidation list.
+- The order detail page's payment line always displayed "Cash on Delivery" regardless of the order's actual payment method — fixed to display the real method.
+
+**Decisions resolved during this phase:**
+- Payment gateway: no real provider integrated; COD + Bank Transfer + a self-built mock gateway shaped after a real hosted-checkout flow, behind the `paymentService` abstraction.
+- Bank Transfer: static/configurable bank details, no proof-of-payment upload.
+- Payment method selection lives inside the existing `CheckoutPage`, not a separate page.
+
+**Files Created:**
+- `server/src/models/Payment.js`
+- `server/src/services/paymentService.js`
+- `server/src/services/payments/cod.js`, `bankTransfer.js`, `mockGateway.js`
+- `server/src/validators/payment.validators.js`
+- `server/src/controllers/payment.controller.js`
+- `server/src/routes/payment.routes.js`
+- `client/src/features/payment/paymentApi.js`, `PaymentMethodSelector.jsx`
+- `client/src/pages/MockGatewayPage.jsx`
+
+**Files Modified:**
+- `server/src/validators/order.validators.js`, `server/src/services/order.service.js`, `server/src/controllers/order.controller.js` (payment method wired into order creation)
+- `server/src/app.js` (payment routes)
+- `client/src/pages/CheckoutPage.jsx` (payment method selection)
+- `client/src/pages/OrderConfirmationPage.jsx` (bank transfer details, payment outcome display)
+- `client/src/pages/OrderDetailPage.jsx` (real payment method display fix)
+- `client/src/features/order/orderApi.js` (order list cache invalidation fix)
+- `client/src/routes/AppRoutes.jsx` (mock gateway route)
+- `docs/ARCHITECTURE.md` (Section 7 fully rewritten — payment gateway decision resolved)
+- `docs/DATABASE.md` (Payment model added)
+- `docs/PROGRESS.md` (this entry; Open Decisions table updated)
+
+**Testing:**
+- Full backend payment API tested via Postman: COD and Bank Transfer order creation, mock gateway initiation, payment fetch with signed outcomes, successful verification updating order `paymentStatus`, and rejection of a tampered signature — 6 test cases, all passing.
+- Full frontend flow tested for all three payment methods: COD (straight to confirmation), Bank Transfer (confirmation shows account details), and mock gateway both success and failure paths (including the crash found and fixed).
+- Payment status consistency confirmed correct on the order detail page for both successful and failed mock payments.
+- Signature security re-confirmed through the real UI (not just Postman) — the frontend genuinely uses the server-provided signature, never fabricates one.
+- Full regression pass confirmed Phases 1–9 unaffected.
+- All required breakpoints checked on the payment method selector, mock gateway page, and confirmation page.
+- Browser console and backend terminal checked throughout — no unexplained errors (known browser-extension noise and expected token-expiry 401s excluded).
+- A file-tracking gap from Step 2 (a commit that claimed to add `MockGatewayPage.jsx` but actually added nothing) was discovered and corrected before this closeout.
+- All work committed incrementally to Git across logical commits and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- No real payment gateway is integrated — by design, per this phase's resolved decision. If a real gateway is desired later, `mockGateway.js` is the file to replace; the surrounding architecture does not need to change.
+- No admin-side payment/order confirmation workflow yet (e.g., manually marking a Bank Transfer as received) — that's Phase 12 (Admin Dashboard) scope.
+
+**Next Phase:** Phase 11 — Notifications, Reviews & Coupons. Not started.
+
 ---
 
 ## Phase History Template
@@ -629,4 +698,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 9 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, product detail experience, authentication, cart/wishlist, and now checkout and orders are all in place — guest and authenticated checkout both work end-to-end with fully backend-verified pricing, stock, and shipping, order confirmation, order history, and order status tracking. Phase 10 — Payments has not started. This file will be updated again when Phase 10 begins.
+Phase 0 through Phase 10 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, product detail experience, authentication, cart/wishlist, and checkout/orders are all in place, and payments are now integrated — Cash on Delivery, Bank Transfer, and a self-built sandboxed mock gateway (standing in for a real Pakistani payment gateway, all of which require merchant registration even for sandbox access) all work end-to-end behind the `paymentService` abstraction, with server-side signature verification. The long-deferred payment gateway decision from Phase 0 is now resolved. Phase 11 — Notifications, Reviews & Coupons has not started. This file will be updated again when Phase 11 begins.
