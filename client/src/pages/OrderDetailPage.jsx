@@ -33,7 +33,9 @@ function OrderDetailPage() {
         ← Back to orders
       </Link>
 
-      <h1 className="text-2xl font-bold text-black mt-3 mb-1">{order.orderNumber}</h1>
+      <h1 className="text-2xl font-bold text-black mt-3 mb-1">
+        {order.orderNumber}
+      </h1>
       <p className="text-sm text-neutral-500 mb-6">
         Placed on {new Date(order.createdAt).toLocaleDateString()}
       </p>
@@ -45,12 +47,16 @@ function OrderDetailPage() {
               <div className="flex flex-col items-center flex-1">
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
-                    i <= currentStepIndex ? "bg-black text-white" : "bg-neutral-200 text-neutral-500"
+                    i <= currentStepIndex
+                      ? "bg-black text-white"
+                      : "bg-neutral-200 text-neutral-500"
                   }`}
                 >
                   {i + 1}
                 </div>
-                <p className="text-xs text-neutral-500 mt-1 capitalize">{step}</p>
+                <p className="text-xs text-neutral-500 mt-1 capitalize">
+                  {step}
+                </p>
               </div>
               {i < STATUS_STEPS.length - 1 && (
                 <div
@@ -61,7 +67,9 @@ function OrderDetailPage() {
           ))}
         </div>
       ) : (
-        <p className="text-sm text-error mb-8">This order has been cancelled.</p>
+        <p className="text-sm text-error mb-8">
+          This order has been cancelled.
+        </p>
       )}
 
       <div className="border border-neutral-200 rounded-md p-4 flex flex-col gap-4">
@@ -69,7 +77,10 @@ function OrderDetailPage() {
           <p className="text-sm font-medium text-black mb-2">Items</p>
           <div className="flex flex-col gap-2">
             {order.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm text-neutral-800">
+              <div
+                key={i}
+                className="flex justify-between text-sm text-neutral-800"
+              >
                 <span>
                   {item.name} ({item.size}/{item.color}) × {item.quantity}
                 </span>
@@ -86,7 +97,9 @@ function OrderDetailPage() {
           </div>
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span>{order.shippingCost === 0 ? "Free" : `$${order.shippingCost}`}</span>
+            <span>
+              {order.shippingCost === 0 ? "Free" : `$${order.shippingCost}`}
+            </span>
           </div>
           <div className="flex justify-between font-semibold text-black">
             <span>Total</span>
@@ -98,16 +111,19 @@ function OrderDetailPage() {
           <p className="text-sm font-medium text-black mb-1">Shipping to</p>
           <p className="text-sm text-neutral-500">
             {order.shippingAddress.fullName}, {order.shippingAddress.line1}
-            {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ""},{" "}
-            {order.shippingAddress.city} {order.shippingAddress.postalCode},{" "}
+            {order.shippingAddress.line2
+              ? `, ${order.shippingAddress.line2}`
+              : ""}
+            , {order.shippingAddress.city} {order.shippingAddress.postalCode},{" "}
             {order.shippingAddress.country}
           </p>
         </div>
 
         <div className="border-t border-neutral-200 pt-3 flex justify-between text-sm">
           <span className="text-neutral-500">Payment</span>
-          <span className="text-black">
-            Cash on Delivery · {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
+          <span className="text-black capitalize">
+            {order.paymentMethod.replace("_", " ")} ·{" "}
+            {order.paymentStatus === "paid" ? "Paid" : "Unpaid"}
           </span>
         </div>
       </div>
