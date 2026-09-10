@@ -6,14 +6,12 @@ const {
   JWT_REFRESH_EXPIRES_IN,
 } = require("../config/env");
 
-// Access and refresh tokens are both signed with the user's id and
-// role - role is included so downstream middleware can authorize
-// admin-only routes without a second database lookup per request.
-
 function signAccessToken(user) {
-  return jwt.sign({ id: user._id, role: user.role }, JWT_ACCESS_SECRET, {
-    expiresIn: JWT_ACCESS_EXPIRES_IN,
-  });
+  return jwt.sign(
+    { id: user._id, role: user.role, name: user.name },
+    JWT_ACCESS_SECRET,
+    { expiresIn: JWT_ACCESS_EXPIRES_IN }
+  );
 }
 
 function signRefreshToken(user) {
