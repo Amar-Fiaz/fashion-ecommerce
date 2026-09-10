@@ -12,6 +12,9 @@ const cartRoutes = require("./routes/cart.routes");
 const wishlistRoutes = require("./routes/wishlist.routes");
 const orderRoutes = require("./routes/order.routes");
 const paymentRoutes = require("./routes/payment.routes");
+const reviewRoutes = require("./routes/review.routes");
+const couponRoutes = require("./routes/coupon.routes");
+const notificationRoutes = require("./routes/notification.routes");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
 
@@ -37,6 +40,9 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/coupons", couponRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

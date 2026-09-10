@@ -10,6 +10,7 @@ async function createOrder(req, res, next) {
       addressId: req.body.addressId,
       shippingAddress: req.body.shippingAddress,
       paymentMethod: req.body.paymentMethod,
+      couponCode: req.body.couponCode,
     });
     res.status(201).json({ success: true, order, payment: paymentInit });
   } catch (error) {

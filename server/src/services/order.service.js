@@ -3,6 +3,8 @@ const Product = require("../models/Product");
 const Cart = require("../models/Cart");
 const User = require("../models/User");
 const { initiatePayment } = require("./paymentService");
+const { validateAndCalculateDiscount, incrementUsage } = require("./coupon.service");
+const { createNotification } = require("./notification.service");
 
 const FLAT_SHIPPING_COST = 8;
 const FREE_SHIPPING_THRESHOLD = 75;
@@ -94,16 +96,41 @@ async function validateAndPriceItems(requestedItems) {
   return pricedItems;
 }
 
-function calculateTotals(pricedItems) {
+// Discount applies to subtotal before shipping; the free-shipping
+// threshold check always uses the original (pre-discount) subtotal,
+// so a coupon can't unexpectedly change shipping eligibility.
+async function calculateTotals(pricedItems, couponCode) {
   const subtotal = pricedItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const shippingCost = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_COST;
-  const total = subtotal + shippingCost;
-  return { subtotal, shippingCost, total };
+
+  let discount = 0;
+  let appliedCoupon = null;
+
+  if (couponCode) {
+    const result = await validateAndCalculateDiscount(couponCode, subtotal);
+    discount = result.discount;
+    appliedCoupon = result.coupon;
+  }
+
+  const total = subtotal - discount + shippingCost;
+
+  return { subtotal, shippingCost, discount, total, appliedCoupon };
 }
 
-async function createOrder({ userId, email, items, addressId, shippingAddress, paymentMethod }) {
+async function createOrder({
+  userId,
+  email,
+  items,
+  addressId,
+  shippingAddress,
+  paymentMethod,
+  couponCode,
+}) {
   const pricedItems = await validateAndPriceItems(items);
-  const { subtotal, shippingCost, total } = calculateTotals(pricedItems);
+  const { subtotal, shippingCost, discount, total, appliedCoupon } = await calculateTotals(
+    pricedItems,
+    couponCode
+  );
   const resolvedAddress = await resolveShippingAddress({
     userId,
     addressId,
@@ -125,20 +152,28 @@ async function createOrder({ userId, email, items, addressId, shippingAddress, p
     shippingAddress: resolvedAddress,
     subtotal,
     shippingCost,
+    discount,
+    couponCode: appliedCoupon?.code || null,
     total,
     paymentMethod,
   });
+
+  if (appliedCoupon) {
+    await incrementUsage(appliedCoupon._id);
+  }
 
   if (userId) {
     await Cart.findOneAndUpdate({ user: userId }, { items: [] });
   }
 
-  // Payment is initiated immediately after order creation - the
-  // order exists (and stock is already deducted) regardless of
-  // payment outcome, matching the approved Phase 9 stock-deduction
-  // timing decision. Payment success/failure only ever affects
-  // paymentStatus, never whether the order itself exists.
   const paymentInit = await initiatePayment(paymentMethod, order);
+
+  await createNotification(
+    userId,
+    "order_placed",
+    `Your order ${order.orderNumber} has been placed successfully.`,
+    { orderId: order._id }
+  );
 
   return { order, paymentInit };
 }

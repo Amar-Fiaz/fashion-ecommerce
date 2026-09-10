@@ -1,10 +1,5 @@
 const mongoose = require("mongoose");
 
-// Embedded, snapshotted line item - per ARCHITECTURE.md's order
-// snapshotting rule, this copies product name/price/image/variant
-// details at time of purchase. Orders never reference live Product
-// documents for this data, so later catalog changes never alter
-// historical orders.
 const orderItemSchema = new mongoose.Schema(
   {
     product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
@@ -21,10 +16,6 @@ const orderItemSchema = new mongoose.Schema(
   { _id: false }
 );
 
-// Embedded shipping address - snapshotted the same way as items, not
-// a reference to User.addresses, so a later edit/deletion of a saved
-// address never affects a past order. See DATABASE.md for the
-// rationale (no standalone Address collection - Phase 9 decision).
 const shippingAddressSchema = new mongoose.Schema(
   {
     fullName: { type: String, required: true },
@@ -43,9 +34,6 @@ const orderSchema = new mongoose.Schema(
   {
     orderNumber: { type: String, required: true, unique: true, index: true },
 
-    // Null for guest orders - user is optional, per approved guest
-    // checkout support. email is always present regardless, since a
-    // guest has no User document to read one from.
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     email: { type: String, required: true },
 
@@ -54,6 +42,8 @@ const orderSchema = new mongoose.Schema(
 
     subtotal: { type: Number, required: true },
     shippingCost: { type: Number, required: true },
+    discount: { type: Number, default: 0 },
+    couponCode: { type: String, default: null },
     total: { type: Number, required: true },
 
     status: {
@@ -66,8 +56,6 @@ const orderSchema = new mongoose.Schema(
       enum: ["unpaid", "paid"],
       default: "unpaid",
     },
-    // Placeholder only - real payment method/gateway selection is
-    // Phase 10 scope. "cod" is the only meaningful value until then.
     paymentMethod: { type: String, default: "cod" },
   },
   { timestamps: true }

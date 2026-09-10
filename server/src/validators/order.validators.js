@@ -25,6 +25,7 @@ const createOrderSchema = z.object({
   addressId: z.string().optional(),
   shippingAddress: shippingAddressInputSchema.optional(),
   paymentMethod: z.enum(["cod", "bank_transfer", "mock_gateway"]),
+  couponCode: z.string().trim().optional(),
 });
 
 module.exports = { createOrderSchema };
