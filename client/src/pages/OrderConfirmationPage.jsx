@@ -48,17 +48,20 @@ function OrderConfirmationPage() {
     <Container className="py-12 max-w-xl mx-auto flex flex-col gap-6 text-center">
       <div>
         <h1 className="text-2xl font-bold text-black">
-          {mockPaymentFailed ? "Order placed - payment not completed" : "Thank you for your order"}
+          {mockPaymentFailed
+            ? "Order placed - payment not completed"
+            : "Thank you for your order"}
         </h1>
         <p className="text-sm text-neutral-500 mt-1">
-          Order <span className="font-medium text-black">{order.orderNumber}</span>
+          Order{" "}
+          <span className="font-medium text-black">{order.orderNumber}</span>
         </p>
       </div>
 
       {mockPaymentFailed && (
         <p className="text-sm text-error border border-error rounded-md p-3">
-          Your simulated payment was not successful. Your order has been recorded,
-          but payment is still marked unpaid.
+          Your simulated payment was not successful. Your order has been
+          recorded, but payment is still marked unpaid.
         </p>
       )}
 
@@ -73,8 +76,12 @@ function OrderConfirmationPage() {
           <p className="text-sm text-neutral-800">
             Account Number: {paymentFromState.bankDetails.accountNumber}
           </p>
-          <p className="text-sm text-neutral-800">Bank: {paymentFromState.bankDetails.bankName}</p>
-          <p className="text-sm text-neutral-800">IBAN: {paymentFromState.bankDetails.iban}</p>
+          <p className="text-sm text-neutral-800">
+            Bank: {paymentFromState.bankDetails.bankName}
+          </p>
+          <p className="text-sm text-neutral-800">
+            IBAN: {paymentFromState.bankDetails.iban}
+          </p>
           <p className="text-xs text-neutral-500 mt-2">
             Please transfer the total amount and reference your order number.
             Your order will be processed once payment is confirmed.
@@ -86,7 +93,10 @@ function OrderConfirmationPage() {
         <div>
           <p className="text-sm font-medium text-black mb-1">Items</p>
           {order.items.map((item, i) => (
-            <div key={i} className="flex justify-between text-sm text-neutral-800">
+            <div
+              key={i}
+              className="flex justify-between text-sm text-neutral-800"
+            >
               <span>
                 {item.name} ({item.size}/{item.color}) × {item.quantity}
               </span>
@@ -100,9 +110,19 @@ function OrderConfirmationPage() {
             <span>Subtotal</span>
             <span>${order.subtotal}</span>
           </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-success">
+              <span>
+                Discount {order.couponCode ? `(${order.couponCode})` : ""}
+              </span>
+              <span>-${order.discount}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span>Shipping</span>
-            <span>{order.shippingCost === 0 ? "Free" : `$${order.shippingCost}`}</span>
+            <span>
+              {order.shippingCost === 0 ? "Free" : `$${order.shippingCost}`}
+            </span>
           </div>
           <div className="flex justify-between font-semibold text-black">
             <span>Total</span>
@@ -114,8 +134,10 @@ function OrderConfirmationPage() {
           <p className="text-sm font-medium text-black mb-1">Shipping to</p>
           <p className="text-sm text-neutral-500">
             {order.shippingAddress.fullName}, {order.shippingAddress.line1}
-            {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ""},{" "}
-            {order.shippingAddress.city} {order.shippingAddress.postalCode},{" "}
+            {order.shippingAddress.line2
+              ? `, ${order.shippingAddress.line2}`
+              : ""}
+            , {order.shippingAddress.city} {order.shippingAddress.postalCode},{" "}
             {order.shippingAddress.country}
           </p>
         </div>

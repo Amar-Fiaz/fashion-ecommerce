@@ -95,6 +95,14 @@ function OrderDetailPage() {
             <span>Subtotal</span>
             <span>${order.subtotal}</span>
           </div>
+          {order.discount > 0 && (
+            <div className="flex justify-between text-success">
+              <span>
+                Discount {order.couponCode ? `(${order.couponCode})` : ""}
+              </span>
+              <span>-${order.discount}</span>
+            </div>
+          )}
           <div className="flex justify-between">
             <span>Shipping</span>
             <span>
