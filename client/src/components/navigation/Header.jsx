@@ -7,6 +7,7 @@ import MobileNav from "./MobileNav";
 import SearchBar from "../../features/product/SearchBar";
 import MiniCart from "../../features/cart/MiniCart";
 import { useCart } from "../../features/cart/useCart";
+import NotificationBell from "../../features/notification/NotificationBell";
 import navigationCategories from "./navigationData";
 import { useLogoutUserMutation } from "../../features/auth/authApi";
 
@@ -187,6 +188,8 @@ function Header() {
             )}
           </div>
 
+          
+          {accessToken && <NotificationBell />}
           <button
             type="button"
             aria-label="Cart"
