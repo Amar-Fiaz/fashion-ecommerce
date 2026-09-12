@@ -6,6 +6,7 @@ import Button from "../components/Button";
 import Input from "../components/Input";
 import AddressForm from "../features/user/AddressForm";
 import PaymentMethodSelector from "../features/payment/PaymentMethodSelector";
+import CouponField from "../features/coupon/CouponField";
 import { useCart } from "../features/cart/useCart";
 import { useGetAddressesQuery } from "../features/user/userApi";
 import { useCreateOrderMutation } from "../features/order/orderApi";
@@ -18,18 +19,25 @@ function CheckoutPage() {
   const { items, subtotal, isAuthenticated } = useCart();
   const { user } = useSelector((state) => state.auth);
 
-  const { data: addressesData } = useGetAddressesQuery(undefined, { skip: !isAuthenticated });
+  const { data: addressesData } = useGetAddressesQuery(undefined, {
+    skip: !isAuthenticated,
+  });
   const savedAddresses = addressesData?.addresses || [];
 
   const [email, setEmail] = useState(user?.email || "");
   const [selectedAddressId, setSelectedAddressId] = useState("");
-  const [useNewAddress, setUseNewAddress] = useState(savedAddresses.length === 0);
+  const [useNewAddress, setUseNewAddress] = useState(
+    savedAddresses.length === 0,
+  );
   const [newAddress, setNewAddress] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState("cod");
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
   const [error, setError] = useState(null);
   const [createOrder, { isLoading }] = useCreateOrderMutation();
 
-  const { shippingCost, total } = calculateOrderTotals(subtotal);
+  const { shippingCost } = calculateOrderTotals(subtotal);
+  const discount = appliedCoupon?.discount || 0;
+  const total = subtotal - discount + shippingCost;
 
   const handlePlaceOrder = async () => {
     setError(null);
@@ -54,8 +62,11 @@ function CheckoutPage() {
         variantSku: item.variantSku,
         quantity: item.quantity,
       })),
-      ...(useNewAddress ? { shippingAddress: newAddress } : { addressId: selectedAddressId }),
+      ...(useNewAddress
+        ? { shippingAddress: newAddress }
+        : { addressId: selectedAddressId }),
       paymentMethod,
+      ...(appliedCoupon ? { couponCode: appliedCoupon.code } : {}),
     };
 
     try {
@@ -65,10 +76,6 @@ function CheckoutPage() {
       }
 
       if (result.payment.redirectRequired) {
-        // Mock gateway flow - navigate to the simulated hosted
-        // checkout page, matching how a real gateway redirect works.
-        // The order id is carried along so the mock gateway page can
-        // send the customer to the real confirmation page afterward.
         navigate(result.payment.redirectUrl, {
           state: { orderId: result.order._id },
         });
@@ -78,7 +85,9 @@ function CheckoutPage() {
         });
       }
     } catch (err) {
-      setError(err?.data?.message || "Could not place your order. Please try again.");
+      setError(
+        err?.data?.message || "Could not place your order. Please try again.",
+      );
     }
   };
 
@@ -100,7 +109,9 @@ function CheckoutPage() {
       <div className="flex flex-col lg:flex-row gap-8">
         <div className="flex-1 flex flex-col gap-6">
           <section>
-            <h2 className="text-lg font-semibold text-black mb-3">Contact email</h2>
+            <h2 className="text-lg font-semibold text-black mb-3">
+              Contact email
+            </h2>
             <Input
               id="checkout-email"
               type="email"
@@ -112,7 +123,9 @@ function CheckoutPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-black mb-3">Shipping address</h2>
+            <h2 className="text-lg font-semibold text-black mb-3">
+              Shipping address
+            </h2>
 
             {savedAddresses.length > 0 && (
               <div className="flex flex-col gap-2 mb-4">
@@ -132,8 +145,8 @@ function CheckoutPage() {
                     />
                     <span>
                       {addr.fullName}, {addr.line1}
-                      {addr.line2 ? `, ${addr.line2}` : ""}, {addr.city} {addr.postalCode},{" "}
-                      {addr.country}
+                      {addr.line2 ? `, ${addr.line2}` : ""}, {addr.city}{" "}
+                      {addr.postalCode}, {addr.country}
                     </span>
                   </label>
                 ))}
@@ -162,33 +175,56 @@ function CheckoutPage() {
             )}
 
             {useNewAddress && newAddress && (
-              <p className="text-sm text-success mt-2">Address ready to use for this order.</p>
+              <p className="text-sm text-success mt-2">
+                Address ready to use for this order.
+              </p>
             )}
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-black mb-3">Payment method</h2>
-            <PaymentMethodSelector value={paymentMethod} onChange={setPaymentMethod} />
+            <h2 className="text-lg font-semibold text-black mb-3">
+              Payment method
+            </h2>
+            <PaymentMethodSelector
+              value={paymentMethod}
+              onChange={setPaymentMethod}
+            />
           </section>
 
           {error && <p className="text-sm text-error">{error}</p>}
         </div>
 
-        <div className="w-full lg:w-72 shrink-0 border border-neutral-200 rounded-md p-4 h-fit flex flex-col gap-3">
+        <div className="w-full lg:w-72 shrink-0 border border-neutral-200 rounded-md p-4 h-fit flex flex-col gap-3 overflow-hidden">
           <h2 className="text-base font-semibold text-black">Order Summary</h2>
           {items.map((item) => (
-            <div key={item.id} className="flex justify-between text-sm text-neutral-800">
+            <div
+              key={item.id}
+              className="flex justify-between text-sm text-neutral-800"
+            >
               <span>
                 {item.name} × {item.quantity}
               </span>
               <span>${item.lineTotal}</span>
             </div>
           ))}
+
+          <CouponField
+            subtotal={subtotal}
+            appliedCoupon={appliedCoupon}
+            onApplied={setAppliedCoupon}
+          />
+
           <div className="border-t border-neutral-200 pt-3 flex flex-col gap-1 text-sm">
             <div className="flex justify-between">
               <span>Subtotal</span>
               <span>${subtotal}</span>
             </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-success">
+                <span>Discount</span>
+                <span>-${discount}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span>Shipping</span>
               <span>{shippingCost === 0 ? "Free" : `$${shippingCost}`}</span>
@@ -201,7 +237,12 @@ function CheckoutPage() {
           <p className="text-xs text-neutral-500">
             Final total is verified by the server when your order is placed.
           </p>
-          <Button variant="primary" className="w-full" disabled={isLoading} onClick={handlePlaceOrder}>
+          <Button
+            variant="primary"
+            className="w-full"
+            disabled={isLoading}
+            onClick={handlePlaceOrder}
+          >
             {isLoading ? "Placing order..." : "Place Order"}
           </Button>
         </div>
