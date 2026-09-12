@@ -8,6 +8,7 @@ import ImageGallery from "../features/product/ImageGallery";
 import VariantSelector from "../features/product/VariantSelector";
 import SizeGuide from "../features/product/SizeGuide";
 import RecentlyViewed from "../features/product/RecentlyViewed";
+import ReviewsSection from "../features/review/ReviewsSection";
 import { useGetProductBySlugQuery } from "../features/product/productApi";
 import {
   useGetWishlistQuery,
@@ -125,6 +126,12 @@ function ProductDetailPage() {
             <SizeGuide />
           </div>
         </div>
+
+        <ReviewsSection
+          productId={product._id}
+          averageRating={product.averageRating}
+          reviewCount={product.reviewCount}
+        />
       </Container>
 
       {relatedProducts.length > 0 && (
