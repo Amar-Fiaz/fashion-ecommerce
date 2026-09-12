@@ -17,6 +17,7 @@ import MockGatewayPage from "../pages/MockGatewayPage";
 import OrderConfirmationPage from "../pages/OrderConfirmationPage";
 import OrderHistoryPage from "../pages/OrderHistoryPage";
 import OrderDetailPage from "../pages/OrderDetailPage";
+import NotificationsPage from "../pages/NotificationsPage";
 import AdminLoginPage from "../pages/AdminLoginPage";
 import AdminPlaceholderPage from "../pages/AdminPlaceholderPage";
 
@@ -42,6 +43,7 @@ function AppRoutes() {
           <Route path="/wishlist" element={<WishlistPage />} />
           <Route path="/orders" element={<OrderHistoryPage />} />
           <Route path="/orders/:id" element={<OrderDetailPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
         </Route>
       </Route>
 
