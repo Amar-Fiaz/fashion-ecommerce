@@ -28,7 +28,9 @@ This file tracks the current development state of the project. It must be read a
 
 **Phase 10 — Payments** — COMPLETE
 
-**Phase 11 — Notifications, Reviews & Coupons** — Not Started
+**Phase 11 — Notifications, Reviews & Coupons** — COMPLETE
+
+**Phase 12 — Admin Dashboard** — Not Started
 
 ---
 
@@ -672,6 +674,75 @@ These decisions are intentionally deferred and must not be guessed at in any pha
 
 **Next Phase:** Phase 11 — Notifications, Reviews & Coupons. Not started.
 
+
+---
+
+### Phase 11 — Notifications, Reviews & Coupons
+
+**Status:** COMPLETE
+
+**Completed:**
+- `Review` model created — one per user per product (compound unique index), gated by purchase verification (any non-cancelled order containing the product). Creating/updating a review recomputes `Product.averageRating`/`reviewCount`, fields that had existed unused on the schema since Phase 5.
+- `Coupon` model created — percentage or fixed discount, optional minimum order value, expiry, and global (not per-user) usage limit. Discount validation/calculation lives in one function (`coupon.service.js`) shared by both the checkout preview endpoint and actual order creation, so a coupon can never be previewed as valid but calculated differently at the point of a real charge.
+- `Notification` model created — delivered via RTK Query polling, not real-time push (no new infrastructure introduced). Trigger scope deliberately limited to events already reachable through existing application code (order placed, review submitted); order-status-change notifications explicitly deferred to Phase 12, since status changes currently only happen via direct database edits, not through any real application code path.
+- JWT access token payload updated to include the user's `name`, needed for displaying review authorship without an extra lookup.
+- `order.service.js` extended to accept an optional coupon code, apply the discount before shipping, and create an order-placed notification — using the same backend-authoritative calculation pattern already established for pricing, stock, and shipping.
+- Coupon seed script added, mirroring the Phase 5/7 seed-script pattern, since no admin coupon management UI exists yet.
+- Frontend: a reviews section on the product detail page (star rating display, purchase-gated review form, public visibility for logged-out visitors); a coupon code field on checkout with live preview and the discount reflected on the confirmation and order detail pages; a notification bell (header, polling, unread badge) and a full notifications page.
+
+**Bugs found and fixed during this phase (via testing):**
+- The reviews section's summary line (average rating/count) used a separately-fetched, stale value instead of the live reviews list, so it could show "No reviews yet" directly above an actual displayed review right after submitting one. Fixed by computing the summary from the same live data source as the list.
+- The coupon code input and "Apply" button overflowed their container at the checkout page's sidebar width. Fixed by switching from flexbox sizing to an explicit CSS Grid column layout (`minmax(0,1fr)_auto`), plus a defensive `overflow-hidden` on the parent card.
+- Notification polling never actually fired: `pollingInterval` was placed inside the RTK Query endpoint definition, where it is silently ignored (no error, no effect) rather than inside the hook call site, where it's actually read. Diagnosed through direct Network-tab observation (zero automatic requests over a sustained wait) after ruling out browser tab-throttling and RTK Toolkit version as causes; fixed by moving the option to both call sites (`NotificationBell`, `NotificationsPage`).
+
+**Decisions resolved during this phase:**
+- Review eligibility: purchase-verified (any non-cancelled order containing the product), one review per user per product.
+- Coupons: percentage or fixed discount, optional minimum order value/expiry/global usage limit, no stacking, case-insensitive codes.
+- Coupon test data via a seed script, mirroring the existing Phase 5/7 pattern.
+- Notifications delivered via polling, not real-time push.
+- Notification triggers scoped to order-placed and review-submitted only this phase; shipped/delivered notifications deferred to Phase 12, where an admin order-status-update action will exist to call the same notification-creation utility.
+
+**Files Created:**
+- `server/src/models/Review.js`, `Coupon.js`, `Notification.js`
+- `server/src/services/review.service.js`, `coupon.service.js`, `notification.service.js`
+- `server/src/controllers/review.controller.js`, `coupon.controller.js`, `notification.controller.js`
+- `server/src/routes/review.routes.js`, `coupon.routes.js`, `notification.routes.js`
+- `server/src/validators/review.validators.js`, `coupon.validators.js`
+- `server/src/utils/seedCoupons.js`
+- `client/src/features/review/reviewApi.js`, `ReviewsSection.jsx`
+- `client/src/features/coupon/couponApi.js`, `CouponField.jsx`
+- `client/src/features/notification/notificationApi.js`, `NotificationBell.jsx`
+- `client/src/pages/NotificationsPage.jsx`
+
+**Files Modified:**
+- `server/src/utils/jwt.js` (name added to access token payload)
+- `server/src/models/Order.js`, `server/src/validators/order.validators.js`, `server/src/services/order.service.js`, `server/src/controllers/order.controller.js` (coupon and notification wiring)
+- `server/src/app.js` (new routes)
+- `client/src/api/apiSlice.js` (Reviews/Notifications cache tags)
+- `client/src/pages/ProductDetailPage.jsx` (reviews section)
+- `client/src/pages/CheckoutPage.jsx` (coupon field)
+- `client/src/pages/OrderConfirmationPage.jsx`, `OrderDetailPage.jsx` (discount display)
+- `client/src/routes/AppRoutes.jsx` (notifications route)
+- `client/src/components/navigation/Header.jsx` (notification bell)
+- `docs/DATABASE.md` (Review, Coupon, Notification models added)
+- `docs/PROGRESS.md` (this entry)
+
+**Testing:**
+- Full backend API tested via Postman: coupon validation (valid, below-minimum, expired), coupon application to a real order, review creation with purchase-verification and rating recomputation, and notification creation/read-marking — 8 test cases, all passing.
+- Full frontend flow tested for reviews (purchased/not-purchased states, submission, public visibility when logged out), coupons (apply/invalid/order placement), and notifications (bell, mark-as-read, full page).
+- Coupon usage-count incrementing confirmed correct in the database across multiple real orders; confirmed as a global (not per-user) limit, per the approved decision.
+- Full regression pass confirmed Phases 1–10 unaffected.
+- All required breakpoints checked on the reviews section, coupon field, and notification dropdown/page.
+- Three real bugs found and fixed during testing (listed above), each confirmed resolved after fixing.
+- Browser console and backend terminal checked throughout — no unexplained errors (known browser-extension noise and expected token-expiry 401s excluded).
+- All work committed incrementally to Git across logical commits and pushed to GitHub, per `CLAUDE.md` Section 19.
+
+**Known Issues:**
+- No admin-side management UI for reviews, coupons, or notifications yet — that's Phase 13 scope.
+- Order-status-change notifications (shipped/delivered) are not yet triggered anywhere, since no real application code path changes order status yet — deferred to Phase 12.
+
+**Next Phase:** Phase 12 — Admin Dashboard. Not started.
+
 ---
 
 ## Phase History Template
@@ -698,4 +769,4 @@ Each future phase entry should follow this format when logged:
 
 ## Status
 
-Phase 0 through Phase 10 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, product detail experience, authentication, cart/wishlist, and checkout/orders are all in place, and payments are now integrated — Cash on Delivery, Bank Transfer, and a self-built sandboxed mock gateway (standing in for a real Pakistani payment gateway, all of which require merchant registration even for sandbox access) all work end-to-end behind the `paymentService` abstraction, with server-side signature verification. The long-deferred payment gateway decision from Phase 0 is now resolved. Phase 11 — Notifications, Reviews & Coupons has not started. This file will be updated again when Phase 11 begins.
+Phase 0 through Phase 11 are all complete and verified. The client and server foundations, design system, global site chrome, product catalog, product detail experience, authentication, cart/wishlist, checkout/orders, and payments are all in place, and the platform now supports post-purchase engagement — purchase-verified product reviews with live rating aggregation, coupon-based discounts fully verified server-side, and polling-based in-app notifications. Phase 12 — Admin Dashboard has not started. This file will be updated again when Phase 12 begins.

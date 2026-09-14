@@ -52,9 +52,9 @@ Status legend: **Not Created** — planned but not yet built · **Created** — 
 | Wishlist | Created | Phase 8 | Product-level only, no variant tracking |
 | Order | Created | Phase 9 | Embedded, snapshotted items and shipping address — see below |
 | Payment | Created | Phase 10 | One record per order's payment attempt; see below |
-| Review | Not Created | Phase 11 | |
-| Coupon | Not Created | Phase 11 | |
-| Notification | Not Created | Phase 11 | |
+| Review | Created | Phase 11 | One per user per product; drives `Product.averageRating`/`reviewCount` |
+| Coupon | Created | Phase 11 | Global usage limit, not per-user |
+| Notification | Created | Phase 11 | Polled by the frontend, not pushed |
 | Banner | Not Created | Phase 13 | |
 | NewsletterSubscriber | Not Created | Phase 4 or 11 (TBD at phase start) | |
 
@@ -220,6 +220,48 @@ No price is stored on cart items — prices are computed live from the reference
 Kept as a separate collection from `Order` (rather than embedded) since a payment attempt is conceptually distinct from what was ordered, and could in principle be retried independently of the order itself.
 
 **No real payment gateway is integrated** — resolved in Phase 10. Every current Pakistani gateway option requires merchant registration even for sandbox access, so `cod` and `bank_transfer` are fully real, and `mock_gateway` is a self-built simulation of a real hosted-checkout flow (redirect → signed callback → server-side HMAC signature verification), implemented behind the `paymentService` abstraction so a real gateway can be substituted later without changing the surrounding order/checkout flow. See `ARCHITECTURE.md` Section 7 for full detail.
+
+### Review
+
+| Field | Type | Notes |
+|---|---|---|
+| `product` | ObjectId (ref: Product) | Required |
+| `user` | ObjectId (ref: User) | Required |
+| `userName` | String | Denormalized at review time, avoids a populate on every list |
+| `rating` | Number | Required, 1–5 |
+| `comment` | String | Optional |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+Compound unique index on `(product, user)` — one review per user per product; resubmitting updates the existing review rather than creating a duplicate. Review eligibility requires at least one non-cancelled order containing the product (checked in `review.service.js`, not enforced at the schema level). Creating or updating a review recomputes `Product.averageRating`/`reviewCount` from all of that product's reviews.
+
+### Coupon
+
+| Field | Type | Notes |
+|---|---|---|
+| `code` | String | Required, unique, stored uppercase, indexed |
+| `discountType` | String | Enum: `percentage` \| `fixed` |
+| `discountValue` | Number | Required |
+| `minOrderValue` | Number | Default 0 |
+| `expiresAt` | Date | Nullable — no expiry if null |
+| `usageLimit` | Number | Nullable — unlimited if null; a simple global counter, not tracked per-user |
+| `usageCount` | Number | Default 0, incremented on each successful order that uses the coupon |
+| `isActive` | Boolean | Default `true` |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+Discount is calculated server-side (`coupon.service.js`) against the order's subtotal, applied before shipping; the same validation/calculation function is used for both the checkout preview (`/api/coupons/apply`) and actual order creation, so a coupon can never be previewed as valid but calculated differently at the point of an actual charge.
+
+### Notification
+
+| Field | Type | Notes |
+|---|---|---|
+| `user` | ObjectId (ref: User) | Required |
+| `type` | String | Enum: `order_placed` \| `review_submitted` |
+| `message` | String | Required |
+| `data` | Mixed | Small payload (e.g. `{ orderId }`) for linking to the relevant page |
+| `isRead` | Boolean | Default `false` |
+| `createdAt` / `updatedAt` | Date | Automatic timestamps |
+
+Delivered via polling (RTK Query `pollingInterval`, passed at the hook call site — not inside the endpoint definition, which silently does nothing), not real-time push — no WebSocket infrastructure was introduced. Notification triggers are scoped to events already reachable through existing application code (order placed, review submitted); order-status-change notifications (e.g. "shipped") are explicitly deferred to Phase 12, since status changes currently only happen via direct database edits, not through any real application code path.
 
 ---
 
