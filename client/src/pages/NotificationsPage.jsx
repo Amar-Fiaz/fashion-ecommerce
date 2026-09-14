@@ -7,7 +7,7 @@ import {
 } from "../features/notification/notificationApi";
 
 function NotificationsPage() {
-  const { data, isLoading } = useGetNotificationsQuery();
+  const { data, isLoading } = useGetNotificationsQuery(undefined, { pollingInterval: 30000 });
   const [markAsRead] = useMarkNotificationReadMutation();
   const [markAllAsRead] = useMarkAllNotificationsReadMutation();
 

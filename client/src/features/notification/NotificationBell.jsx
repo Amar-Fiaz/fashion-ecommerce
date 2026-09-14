@@ -7,7 +7,7 @@ import {
 
 function NotificationBell() {
   const [open, setOpen] = useState(false);
-  const { data } = useGetNotificationsQuery();
+  const { data } = useGetNotificationsQuery(undefined, { pollingInterval: 30000 });
   const [markAsRead] = useMarkNotificationReadMutation();
 
   const notifications = data?.notifications || [];
