@@ -188,7 +188,6 @@ function Header() {
             )}
           </div>
 
-          
           {accessToken && <NotificationBell />}
           <button
             type="button"
