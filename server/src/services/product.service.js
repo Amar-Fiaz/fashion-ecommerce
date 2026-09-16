@@ -75,19 +75,12 @@ async function getSearchSuggestions(query) {
   return Product.find({ name: regex }).select("name slug").limit(8);
 }
 
-// Fetches a single product by its slug, with category/subCategory
-// populated. Returns null if not found - the controller is
-// responsible for turning that into a 404.
 async function getProductBySlug(slug) {
   return Product.findOne({ slug })
     .populate("category", "name slug")
     .populate("subCategory", "name slug");
 }
 
-// Related products: same subCategory first (excluding the current
-// product), falling back to same category if fewer than `limit`
-// subCategory matches exist - handles categories with no
-// subcategories (e.g. "Sale") and small catalogs gracefully.
 async function getRelatedProducts(product, limit = 4) {
   const subCategoryMatches = await Product.find({
     subCategory: product.subCategory,
@@ -115,9 +108,66 @@ async function getRelatedProducts(product, limit = 4) {
   return [...subCategoryMatches, ...categoryMatches];
 }
 
+// --- Admin CRUD functions below ---
+
+async function createProduct(data) {
+  const existing = await Product.findOne({ slug: data.slug });
+  if (existing) {
+    const error = new Error("A product with this slug already exists");
+    error.statusCode = 409;
+    throw error;
+  }
+  return Product.create(data);
+}
+
+async function updateProduct(productId, data) {
+  if (data.slug) {
+    const existing = await Product.findOne({ slug: data.slug, _id: { $ne: productId } });
+    if (existing) {
+      const error = new Error("A product with this slug already exists");
+      error.statusCode = 409;
+      throw error;
+    }
+  }
+
+  const product = await Product.findByIdAndUpdate(productId, data, {
+    new: true,
+    runValidators: true,
+  });
+  if (!product) {
+    const error = new Error("Product not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  return product;
+}
+
+async function deleteProduct(productId) {
+  const product = await Product.findByIdAndDelete(productId);
+  if (!product) {
+    const error = new Error("Product not found");
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
+async function getProductByIdForAdmin(productId) {
+  const product = await Product.findById(productId);
+  if (!product) {
+    const error = new Error("Product not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  return product;
+}
+
 module.exports = {
   getProducts,
   getSearchSuggestions,
   getProductBySlug,
   getRelatedProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  getProductByIdForAdmin,
 };
