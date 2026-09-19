@@ -96,9 +96,6 @@ async function validateAndPriceItems(requestedItems) {
   return pricedItems;
 }
 
-// Discount applies to subtotal before shipping; the free-shipping
-// threshold check always uses the original (pre-discount) subtotal,
-// so a coupon can't unexpectedly change shipping eligibility.
 async function calculateTotals(pricedItems, couponCode) {
   const subtotal = pricedItems.reduce((sum, item) => sum + item.lineTotal, 0);
   const shippingCost = subtotal > FREE_SHIPPING_THRESHOLD ? 0 : FLAT_SHIPPING_COST;
@@ -199,4 +196,75 @@ async function getOrdersForUser(userId) {
   return Order.find({ user: userId }).sort({ createdAt: -1 });
 }
 
-module.exports = { createOrder, getOrderById, getOrdersForUser };
+// --- Admin functions below ---
+
+async function getAllOrdersForAdmin({ status, search, page = 1, limit = 20 }) {
+  const filter = {};
+  if (status) filter.status = status;
+  if (search) {
+    filter.$or = [
+      { orderNumber: new RegExp(search, "i") },
+      { email: new RegExp(search, "i") },
+    ];
+  }
+
+  const pageNum = Math.max(1, Number(page));
+  const limitNum = Math.max(1, Number(limit));
+  const skip = (pageNum - 1) * limitNum;
+
+  const [orders, total] = await Promise.all([
+    Order.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limitNum),
+    Order.countDocuments(filter),
+  ]);
+
+  return {
+    orders,
+    pagination: { page: pageNum, limit: limitNum, total, totalPages: Math.ceil(total / limitNum) },
+  };
+}
+
+async function getOrderByIdForAdmin(orderId) {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    const error = new Error("Order not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  return order;
+}
+
+// Updating status creates a customer-facing notification (per the
+// approved Phase 12 decision) - this is the first real application
+// code path that changes order status, replacing the direct Atlas
+// edits used for testing in earlier phases.
+async function updateOrderStatus(orderId, status) {
+  const order = await Order.findById(orderId);
+  if (!order) {
+    const error = new Error("Order not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  order.status = status;
+  await order.save();
+
+  if (order.user) {
+    await createNotification(
+      order.user,
+      "order_status_updated",
+      `Your order ${order.orderNumber} is now ${status}.`,
+      { orderId: order._id }
+    );
+  }
+
+  return order;
+}
+
+module.exports = {
+  createOrder,
+  getOrderById,
+  getOrdersForUser,
+  getAllOrdersForAdmin,
+  getOrderByIdForAdmin,
+  updateOrderStatus,
+};
